@@ -1,0 +1,4351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Brain Jelly — Material Studies No. 014</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg-deep: #0b0611;
+      --bg-panel: rgba(16, 10, 24, 0.82);
+      --border-subtle: rgba(235, 214, 245, 0.13);
+      --border-focus: rgba(244, 168, 194, 0.48);
+      --text-main: #f3ecf8;
+      --text-muted: rgba(226, 212, 238, 0.58);
+      --text-dim: rgba(212, 196, 226, 0.36);
+      --accent-rose: #f3a6c0;
+      --accent-green: #7ce88b;
+      --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+      --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-deep);
+      color: var(--text-main);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #canvas-wrap {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #canvas-wrap.grabbing {
+      cursor: grabbing;
+    }
+
+    #ui-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto 1fr auto;
+      padding: 26px 30px;
+    }
+
+    /* Top Left Masthead */
+    .masthead {
+      grid-column: 1;
+      grid-row: 1;
+      pointer-events: auto;
+      max-width: 320px;
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .title-main {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(54px, 6vw, 78px);
+      line-height: 0.88;
+      letter-spacing: -0.02em;
+      color: #f8f3fb;
+    }
+
+    .title-main .jelly-word {
+      display: block;
+      font-style: italic;
+      color: var(--accent-rose);
+      padding-left: 18px;
+      transition: color 0.35s ease;
+    }
+
+    .masthead-sub {
+      margin-top: 14px;
+      font-family: var(--serif);
+      font-size: 16px;
+      line-height: 1.32;
+      color: var(--text-muted);
+    }
+
+    /* Top Right Status & Control Panel */
+    .right-column {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .status-pill {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 11px;
+      border-radius: 4px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(14px);
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .status-dot.paused {
+      background: #f5b942;
+      box-shadow: 0 0 8px #f5b942;
+    }
+
+    .specimen-panel {
+      pointer-events: auto;
+      width: 244px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 15px 15px 14px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .panel-title {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .panel-fig {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 14px;
+      color: var(--accent-rose);
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 8.5px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 7px;
+    }
+
+    .flavour-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .flavour-btn {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 5px 6px 6px;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.12s ease;
+    }
+
+    .flavour-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .flavour-btn.active {
+      border-color: rgba(245, 224, 240, 0.55);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .flavour-swatch {
+      display: block;
+      width: 100%;
+      height: 11px;
+      border-radius: 2px;
+      margin-bottom: 5px;
+    }
+
+    .flavour-name {
+      display: block;
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 13px;
+      color: var(--text-main);
+      line-height: 1.1;
+    }
+
+    /* Sliders */
+    .slider-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .slider-val {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    input[type="range"].editorial-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 16px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"].editorial-slider::-webkit-slider-runnable-track {
+      height: 1px;
+      background: rgba(235, 214, 245, 0.24);
+    }
+
+    input[type="range"].editorial-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--bg-deep);
+      border: 1.5px solid var(--accent-rose);
+      margin-top: -5px;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    input[type="range"].editorial-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+      background: var(--accent-rose);
+    }
+
+    .slider-ends {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Action Buttons 2x2 */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding-top: 2px;
+    }
+
+    .act-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 9px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-main);
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 400;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .act-btn:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(244, 168, 194, 0.42);
+    }
+
+    .act-btn:active {
+      transform: translateY(1px);
+    }
+
+    .act-icon {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Sound & Checkboxes */
+    .sound-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 2px;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      background: transparent;
+      border-left: none;
+      border-right: none;
+      color: var(--text-muted);
+      font-family: var(--sans);
+      font-size: 11px;
+      cursor: pointer;
+      width: 100%;
+      transition: color 0.15s ease;
+    }
+
+    .sound-row:hover {
+      color: var(--text-main);
+    }
+
+    .sound-status {
+      font-family: var(--mono);
+      font-size: 9.5px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+    }
+
+    .sound-status.on {
+      color: var(--accent-rose);
+    }
+
+    .toggles-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .chk-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .chk-label input {
+      accent-color: var(--accent-rose);
+      width: 12px;
+      height: 12px;
+      cursor: pointer;
+    }
+
+    .pause-btn {
+      width: 100%;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-main);
+      font-family: var(--sans);
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .pause-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-focus);
+    }
+
+    .pause-btn.active {
+      background: rgba(243, 166, 192, 0.16);
+      border-color: var(--accent-rose);
+      color: var(--accent-rose);
+    }
+
+    /* Bottom Left Telemetry & Instructions */
+    .bottom-left {
+      grid-column: 1;
+      grid-row: 3;
+      pointer-events: auto;
+      max-width: 390px;
+      align-self: end;
+    }
+
+    .handle-quote {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 16.5px;
+      line-height: 1.35;
+      color: #efe7f6;
+      margin-bottom: 14px;
+    }
+
+    .readout-strip {
+      display: grid;
+      grid-template-columns: repeat(4, auto);
+      gap: 16px;
+      padding: 10px 0;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 10px;
+    }
+
+    .readout-item {
+      border-right: 1px solid var(--border-subtle);
+      padding-right: 14px;
+    }
+
+    .readout-item:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    .readout-label {
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .readout-value {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    .readout-value small {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-left: 1px;
+    }
+
+    .readout-mood {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 17px;
+      color: var(--accent-rose);
+      line-height: 1.05;
+    }
+
+    .shortcuts-line {
+      font-family: var(--mono);
+      font-size: 9px;
+      line-height: 1.65;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+
+    /* Bottom Right Notes Drawer */
+    .bottom-right {
+      grid-column: 2;
+      grid-row: 3;
+      align-self: end;
+      justify-self: end;
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .notes-drawer {
+      width: 340px;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      backdrop-filter: blur(18px);
+      transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, padding 0.25s ease;
+      padding: 0 16px;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    .notes-drawer.open {
+      max-height: 360px;
+      opacity: 1;
+      padding: 15px 16px;
+      overflow-y: auto;
+    }
+
+    .notes-drawer h4 {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--accent-rose);
+      margin-bottom: 8px;
+    }
+
+    .notes-drawer p {
+      font-size: 11.5px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      margin-bottom: 9px;
+    }
+
+    .notes-drawer p strong {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .notes-toggle-btn {
+      width: 244px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 13px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      backdrop-filter: blur(14px);
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .notes-toggle-btn:hover {
+      color: var(--text-main);
+      border-color: var(--border-focus);
+    }
+
+    /* Loading indicator during Surface Nets build */
+    #loading-banner {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: #0b0611;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: opacity 0.45s ease;
+    }
+
+    #loading-banner.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader-title {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 28px;
+      color: var(--accent-rose);
+    }
+
+    .loader-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Stacked Phone Layout */
+    @media (max-width: 820px) {
+      html, body {
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      #canvas-wrap {
+        position: relative;
+        height: 58vh;
+        min-height: 360px;
+      }
+
+      #ui-layer {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(11,6,17,0.2) 0%, #0b0611 18%);
+      }
+
+      .masthead {
+        position: fixed;
+        top: 14px;
+        left: 16px;
+        z-index: 20;
+        pointer-events: none;
+      }
+
+      .title-main {
+        font-size: 42px;
+      }
+
+      .masthead-sub {
+        font-size: 13px;
+        margin-top: 6px;
+      }
+
+      .right-column {
+        align-items: stretch;
+        width: 100%;
+      }
+
+      .status-pill {
+        position: fixed;
+        top: 14px;
+        right: 16px;
+        z-index: 20;
+      }
+
+      .specimen-panel {
+        width: 100%;
+      }
+
+      .bottom-left {
+        max-width: 100%;
+        width: 100%;
+      }
+
+      .bottom-right {
+        width: 100%;
+        align-items: stretch;
+      }
+
+      .notes-drawer, .notes-toggle-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading-banner">
+    <div class="loader-title">Synthesising Brain Jelly…</div>
+    <div class="loader-sub" id="loader-step">Polygonising 1.7 mm Surface Nets &amp; BCC Tetrahedral Lattice</div>
+  </div>
+
+  <div id="canvas-wrap"></div>
+
+  <div id="ui-layer">
+    <!-- Masthead -->
+    <header class="masthead">
+      <div class="eyebrow">MATERIAL STUDIES / NO. 014 · MIDNIGHT EDITION</div>
+      <h1 class="title-main">
+        Brain
+        <span class="jelly-word" id="title-jelly">Jelly.</span>
+      </h1>
+      <p class="masthead-sub">
+        A little mind.<br>
+        A lot of feelings.
+      </p>
+    </header>
+
+    <!-- Right Control Column -->
+    <aside class="right-column">
+      <div class="status-pill">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">WEBGL2 · ALIVE</span>
+      </div>
+
+      <section class="specimen-panel" aria-label="Specimen Controls">
+        <div class="panel-header">
+          <span class="panel-title">THE SPECIMEN</span>
+          <span class="panel-fig" id="panel-fig">fig. 14</span>
+        </div>
+
+        <div>
+          <div class="section-label">FLAVOUR OF THOUGHT</div>
+          <div class="flavour-grid">
+            <button type="button" class="flavour-btn active" id="flav-raspberry" data-flavour="raspberry">
+              <span class="flavour-swatch" style="background: #f28da8;"></span>
+              <span class="flavour-name">Raspberry</span>
+            </button>
+            <button type="button" class="flavour-btn" id="flav-lime" data-flavour="lime">
+              <span class="flavour-swatch" style="background: #a5f04c;"></span>
+              <span class="flavour-name">Zombie lime</span>
+            </button>
+            <button type="button" class="flavour-btn" id="flav-grape" data-flavour="grape">
+              <span class="flavour-swatch" style="background: #b695f6;"></span>
+              <span class="flavour-name">Grape</span>
+            </button>
+            <button type="button" class="flavour-btn" id="flav-ghost" data-flavour="ghost">
+              <span class="flavour-swatch" style="background: #dce6f2;"></span>
+              <span class="flavour-name">Ghost clear</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="slider-block">
+          <div class="slider-top">
+            <span class="section-label" style="margin-bottom:0;">FIRMNESS</span>
+            <span class="slider-val" id="val-firmness">0.55</span>
+          </div>
+          <input type="range" class="editorial-slider" id="slider-firmness" min="0.15" max="0.95" step="0.01" value="0.55" />
+          <div class="slider-ends">
+            <span>trembling</span>
+            <span>set</span>
+          </div>
+        </div>
+
+        <div class="slider-block">
+          <div class="slider-top">
+            <span class="section-label" style="margin-bottom:0;">DAMPING</span>
+            <span class="slider-val" id="val-damping">0.42</span>
+          </div>
+          <input type="range" class="editorial-slider" id="slider-damping" min="0.05" max="0.90" step="0.01" value="0.42" />
+          <div class="slider-ends">
+            <span>lively</span>
+            <span>syrupy</span>
+          </div>
+        </div>
+
+        <div class="action-grid">
+          <button type="button" class="act-btn" id="btn-poke">
+            <span>Poke</span>
+            <span class="act-icon">↘</span>
+          </button>
+          <button type="button" class="act-btn" id="btn-toss">
+            <span>Toss</span>
+            <span class="act-icon">↑</span>
+          </button>
+          <button type="button" class="act-btn" id="btn-zap">
+            <span>Zap</span>
+            <span class="act-icon">↯</span>
+          </button>
+          <button type="button" class="act-btn" id="btn-reset">
+            <span>Reset</span>
+            <span class="act-icon">↺</span>
+          </button>
+        </div>
+
+        <button type="button" class="sound-row" id="btn-sound">
+          <span>♪ Sound</span>
+          <span class="sound-status" id="sound-label">OFF</span>
+        </button>
+
+        <div class="toggles-row">
+          <label class="chk-label" for="chk-slow">
+            <input type="checkbox" id="chk-slow" />
+            <span>¼ speed</span>
+          </label>
+          <label class="chk-label" for="chk-mesh">
+            <input type="checkbox" id="chk-mesh" />
+            <span>Show mesh</span>
+          </label>
+        </div>
+
+        <button type="button" class="pause-btn" id="btn-pause">Pause</button>
+      </section>
+    </aside>
+
+    <!-- Bottom Left Readouts -->
+    <section class="bottom-left" aria-label="Specimen Telemetry">
+      <div class="eyebrow" style="margin-bottom: 6px;">HANDLE WITH FEELING</div>
+      <div class="handle-quote">
+        Pull a fold. Flick to throw.<br>
+        Stroke to tickle. Poke to tease.
+      </div>
+
+      <div class="readout-strip">
+        <div class="readout-item">
+          <div class="readout-label">MASS</div>
+          <div class="readout-value" id="readout-mass">≈422<small>g</small></div>
+        </div>
+        <div class="readout-item">
+          <div class="readout-label">VOLUME</div>
+          <div class="readout-value" id="readout-volume">100.0<small>%</small></div>
+        </div>
+        <div class="readout-item">
+          <div class="readout-label">FIRING</div>
+          <div class="readout-value" id="readout-firing">2.8<small>/s</small></div>
+        </div>
+        <div class="readout-item">
+          <div class="readout-label">MOOD</div>
+          <div class="readout-mood" id="readout-mood">Calm</div>
+        </div>
+      </div>
+
+      <div class="shortcuts-line">
+        Scroll while holding to twist · Drag the table to orbit<br>
+        P · poke &nbsp; T · toss &nbsp; Z · zap &nbsp; R · reset &nbsp; Space · pause
+      </div>
+    </section>
+
+    <!-- Bottom Right Notes -->
+    <section class="bottom-right" aria-label="Experiment Notes">
+      <div class="notes-drawer" id="notes-drawer">
+        <h4>Inside the experiment</h4>
+        <p>
+          <strong>Anatomical SDF &amp; Surface Nets (~1.7 mm):</strong> The outer cortex begins as a smooth union of six ellipsoids — two cerebral hemispheres, two temporal lobes, and a bilobed cerebellum with a flattened base. Gyri crowns are carved by the zero-sets of domain-warped 3D gradient noise alongside longitudinal, Sylvian, and transverse fissures and fine parallel cerebellar folia, polygonised once with Surface Nets.
+        </p>
+        <p>
+          <strong>BCC Co-Rotational XPBD &amp; Cofactor Normals:</strong> A body-centered cubic (BCC) tetrahedral lattice is stuffed into the hull and snapped to the boundary. Running at 60 Hz with 8 substeps, each tetrahedron solves volume preservation and warm-started polar-decomposition shape matching. Surface vertices deform via barycentric weights while vertex normals ride the cofactor matrix (<code>det(F)·F⁻ᵀ</code>) averaged onto particles.
+        </p>
+        <p>
+          <strong>Six-Pass Beer–Lambert Optics:</strong> Six <code>THREE.Scene</code> passes compute a tinted PCSS-lite shadow map, top-down contact AO, an MSAA half-float interior pass (~30 firing nerve threads, bubbles, rigid candy eyes, planar lids, and flickering candle), back-face ray thickness, screen-space refraction with fold-weighted Beer–Lambert absorption and sulcus-dulled softbox reflections, and Khronos PBR Neutral tone mapping.
+        </p>
+      </div>
+      <button type="button" class="notes-toggle-btn" id="btn-notes">
+        <span>INSIDE THE EXPERIMENT</span>
+        <span id="notes-plus">+</span>
+      </button>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // 1. FLAVOUR PRESETS & GLOBAL STATE
+      // =========================================================================
+      const FLAVOURS = {
+        raspberry: {
+          name: 'Raspberry',
+          massGrams: 422,
+          accentHex: '#f3a6c0',
+          tintColor: new THREE.Color(0.97, 0.34, 0.52),
+          absorbColor: new THREE.Vector3(2.4, 8.8, 6.2),
+          scatterColor: new THREE.Vector3(0.98, 0.38, 0.56),
+          rimColor: new THREE.Vector3(1.0, 0.65, 0.78),
+          irisColor: new THREE.Vector3(0.14, 0.62, 0.78),
+          sparkColor: new THREE.Color(1.0, 0.86, 0.55),
+          shadowTint: new THREE.Vector3(0.55, 0.12, 0.24),
+          opacityMul: 1.0
+        },
+        lime: {
+          name: 'Zombie lime',
+          massGrams: 430,
+          accentHex: '#a5f04c',
+          tintColor: new THREE.Color(0.52, 0.94, 0.16),
+          absorbColor: new THREE.Vector3(6.8, 1.7, 9.5),
+          scatterColor: new THREE.Vector3(0.58, 0.96, 0.22),
+          rimColor: new THREE.Vector3(0.76, 1.0, 0.45),
+          irisColor: new THREE.Vector3(0.68, 0.26, 0.85),
+          sparkColor: new THREE.Color(0.88, 1.0, 0.45),
+          shadowTint: new THREE.Vector3(0.22, 0.52, 0.08),
+          opacityMul: 1.0
+        },
+        grape: {
+          name: 'Grape',
+          massGrams: 438,
+          accentHex: '#b695f6',
+          tintColor: new THREE.Color(0.56, 0.30, 0.95),
+          absorbColor: new THREE.Vector3(4.8, 9.2, 1.9),
+          scatterColor: new THREE.Vector3(0.62, 0.36, 0.96),
+          rimColor: new THREE.Vector3(0.80, 0.64, 1.0),
+          irisColor: new THREE.Vector3(0.95, 0.76, 0.22),
+          sparkColor: new THREE.Color(0.75, 0.88, 1.0),
+          shadowTint: new THREE.Vector3(0.28, 0.10, 0.52),
+          opacityMul: 1.05
+        },
+        ghost: {
+          name: 'Ghost clear',
+          massGrams: 410,
+          accentHex: '#dce6f2',
+          tintColor: new THREE.Color(0.82, 0.91, 0.99),
+          absorbColor: new THREE.Vector3(1.15, 0.82, 0.55),
+          scatterColor: new THREE.Vector3(0.75, 0.86, 0.98),
+          rimColor: new THREE.Vector3(0.90, 0.96, 1.0),
+          irisColor: new THREE.Vector3(0.22, 0.58, 0.88),
+          sparkColor: new THREE.Color(0.52, 0.90, 1.0),
+          shadowTint: new THREE.Vector3(0.32, 0.40, 0.52),
+          opacityMul: 0.48
+        }
+      };
+
+      const state = {
+        flavourKey: 'raspberry',
+        firmness: 0.55,
+        damping: 0.42,
+        soundEnabled: false,
+        slowMo: false,
+        showMesh: false,
+        paused: false,
+        mood: 'Calm',
+        volumePct: 100.0,
+        firingRate: 2.8,
+        idleSeconds: 0,
+        pokeCounter: 0,
+        lastPokeTime: -10,
+        eyeWinceSide: 0,
+        eyeWinceTimer: 0,
+        dizzyTimer: 0,
+        zapTimer: 0,
+        tickleScore: 0,
+        tickleTimer: 0,
+        thinkTimer: 0,
+        upsideDownTimer: 0,
+        nextHopTimer: 0,
+        breathPhase: 0,
+        simTime: 0
+      };
+
+      // =========================================================================
+      // 2. PROCEDURAL WEBAUDIO SYNTHESIZER
+      // =========================================================================
+      class ProceduralSoundEngine {
+        constructor() {
+          this.ctx = null;
+          this.noiseBuffer = null;
+          this.lastSquelch = 0;
+          this.lastWhee = 0;
+          this.lastSnore = 0;
+          this.lastGiggle = 0;
+        }
+
+        ensureContext() {
+          if (!state.soundEnabled) return false;
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return false;
+            this.ctx = new AudioCtx();
+            const sr = this.ctx.sampleRate;
+            this.noiseBuffer = this.ctx.createBuffer(1, sr * 1.5, sr);
+            const data = this.noiseBuffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+              data[i] = Math.random() * 2 - 1;
+            }
+          }
+          if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+          return true;
+        }
+
+        playSquelch(intensity = 0.5) {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          if (now - this.lastSquelch < 0.09) return;
+          this.lastSquelch = now;
+
+          const dur = 0.14 + Math.min(0.18, intensity * 0.12);
+          const osc = this.ctx.createOscillator();
+          const mod = this.ctx.createOscillator();
+          const modGain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'triangle';
+          const baseFreq = 150 + Math.random() * 90;
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.85, now + dur * 0.45);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.72, now + dur);
+
+          mod.type = 'sine';
+          mod.frequency.setValueAtTime(34 + Math.random() * 18, now);
+          modGain.gain.setValueAtTime(110 * intensity, now);
+
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(380, now);
+          filter.frequency.exponentialRampToValueAtTime(1150, now + dur * 0.5);
+          filter.Q.setValueAtTime(4.5, now);
+
+          const vol = Math.min(0.28, 0.08 + intensity * 0.18);
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(vol, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+          mod.connect(modGain);
+          modGain.connect(filter.frequency);
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          mod.start(now);
+          osc.stop(now + dur);
+          mod.stop(now + dur);
+        }
+
+        playBoop(pitchMul = 1.0) {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(290 * pitchMul, now);
+          osc.frequency.exponentialRampToValueAtTime(520 * pitchMul, now + 0.09);
+          osc.frequency.exponentialRampToValueAtTime(340 * pitchMul, now + 0.19);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.22, now + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.21);
+        }
+
+        playOuch() {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(620, now);
+          osc.frequency.exponentialRampToValueAtTime(210, now + 0.28);
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1400, now);
+          filter.frequency.exponentialRampToValueAtTime(420, now + 0.28);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.22, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.29);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.30);
+        }
+
+        playGiggle() {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          if (now - this.lastGiggle < 0.32) return;
+          this.lastGiggle = now;
+
+          const notes = [520, 660, 590, 740];
+          notes.forEach((freq, idx) => {
+            const t0 = now + idx * 0.068;
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t0);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.18, t0 + 0.055);
+            g.gain.setValueAtTime(0.001, t0);
+            g.gain.linearRampToValueAtTime(0.14, t0 + 0.012);
+            g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.062);
+            osc.connect(g);
+            g.connect(this.ctx.destination);
+            osc.start(t0);
+            osc.stop(t0 + 0.065);
+          });
+        }
+
+        playWhee() {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          if (now - this.lastWhee < 0.45) return;
+          this.lastWhee = now;
+
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(340, now);
+          osc.frequency.exponentialRampToValueAtTime(780, now + 0.22);
+          osc.frequency.exponentialRampToValueAtTime(480, now + 0.48);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.18, now + 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.50);
+        }
+
+        playZap() {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          const dur = 0.55;
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = this.noiseBuffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(2200, now);
+          filter.Q.setValueAtTime(3.0, now);
+
+          const buzz = this.ctx.createOscillator();
+          buzz.type = 'sawtooth';
+          buzz.frequency.setValueAtTime(120, now);
+          buzz.frequency.linearRampToValueAtTime(85, now + dur);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.26, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          buzz.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          noise.start(now);
+          buzz.start(now);
+          noise.stop(now + dur);
+          buzz.stop(now + dur);
+        }
+
+        playSnore() {
+          if (!this.ensureContext()) return;
+          const now = this.ctx.currentTime;
+          if (now - this.lastSnore < 2.2) return;
+          this.lastSnore = now;
+
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(72, now);
+          osc.frequency.linearRampToValueAtTime(96, now + 0.65);
+          osc.frequency.linearRampToValueAtTime(64, now + 1.15);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(260, now);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.09, now + 0.25);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 1.22);
+        }
+      }
+
+      const sound = new ProceduralSoundEngine();
+
+      // =========================================================================
+      // 3. ANATOMICAL BRAIN SDF (Smooth Ellipsoids + Sulci + Fissures + Folia)
+      // =========================================================================
+      function smin(a, b, k) {
+        const h = Math.max(k - Math.abs(a - b), 0.0) / k;
+        return Math.min(a, b) - h * h * k * 0.25;
+      }
+
+      function smax(a, b, k) {
+        return -smin(-a, -b, k);
+      }
+
+      function sdEllipsoid(px, py, pz, cx, cy, cz, rx, ry, rz) {
+        const dx = (px - cx) / rx;
+        const dy = (py - cy) / ry;
+        const dz = (pz - cz) / rz;
+        const k0 = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (k0 < 1e-6) return -Math.min(rx, ry, rz);
+        const dx2 = (px - cx) / (rx * rx);
+        const dy2 = (py - cy) / (ry * ry);
+        const dz2 = (pz - cz) / (rz * rz);
+        const k1 = Math.sqrt(dx2 * dx2 + dy2 * dy2 + dz2 * dz2);
+        return k0 * (k0 - 1.0) / k1;
+      }
+
+      function gradDot(ix, iy, iz, fx, fy, fz) {
+        const h = ((ix * 73856093) ^ (iy * 19349663) ^ (iz * 83492791)) & 15;
+        const u = h < 8 ? fx : fy;
+        const v = h < 4 ? fy : (h === 12 || h === 14 ? fx : fz);
+        return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+      }
+
+      function noise3D(x, y, z) {
+        const ix = Math.floor(x);
+        const iy = Math.floor(y);
+        const iz = Math.floor(z);
+        const fx = x - ix;
+        const fy = y - iy;
+        const fz = z - iz;
+        const ux = fx * fx * fx * (fx * (fx * 6 - 15) + 10);
+        const uy = fy * fy * fy * (fy * (fy * 6 - 15) + 10);
+        const uz = fz * fz * fz * (fz * (fz * 6 - 15) + 10);
+
+        const n000 = gradDot(ix, iy, iz, fx, fy, fz);
+        const n100 = gradDot(ix + 1, iy, iz, fx - 1, fy, fz);
+        const n010 = gradDot(ix, iy + 1, iz, fx, fy - 1, fz);
+        const n110 = gradDot(ix + 1, iy + 1, iz, fx - 1, fy - 1, fz);
+        const n001 = gradDot(ix, iy, iz + 1, fx, fy, fz - 1);
+        const n101 = gradDot(ix + 1, iy, iz + 1, fx - 1, fy, fz - 1);
+        const n011 = gradDot(ix, iy + 1, iz + 1, fx, fy - 1, fz - 1);
+        const n111 = gradDot(ix + 1, iy + 1, iz + 1, fx - 1, fy - 1, fz - 1);
+
+        const nx00 = n000 + ux * (n100 - n000);
+        const nx10 = n010 + ux * (n110 - n010);
+        const nx01 = n001 + ux * (n101 - n001);
+        const nx11 = n011 + ux * (n111 - n011);
+        const nxy0 = nx00 + uy * (nx10 - nx00);
+        const nxy1 = nx01 + uy * (nx11 - nx01);
+        return nxy0 + uz * (nxy1 - nxy0);
+      }
+
+      function evalHullSDF(x, y, z) {
+        const ax = Math.abs(x);
+        const rearWidening = 1.0 - 0.12 * z;
+        const dHemi = sdEllipsoid(ax, y, z, 0.22 * rearWidening, 0.39, -0.01, 0.32, 0.34, 0.44);
+        const dTemp = sdEllipsoid(ax, y, z, 0.33, 0.21, 0.07, 0.20, 0.175, 0.29);
+        const dCereb = sdEllipsoid(ax, y, z, 0.17, 0.17, -0.29, 0.21, 0.155, 0.18);
+
+        let d = smin(dHemi, dTemp, 0.085);
+        d = smin(d, dCereb, 0.065);
+
+        const dBase = 0.006 - y;
+        d = smax(d, dBase, 0.045);
+
+        const cleft = 0.018 * Math.exp(-Math.pow(x / 0.055, 2)) * Math.max(0.0, (y - 0.14) / 0.55);
+        return d + cleft;
+      }
+
+      function evalSkinSDFWithSulcus(x, y, z, outSulcus) {
+        const ax = Math.abs(x);
+        const rearWidening = 1.0 - 0.12 * z;
+
+        const dHemi = sdEllipsoid(ax, y, z, 0.225 * rearWidening, 0.39, -0.01, 0.32, 0.34, 0.44);
+        const dTemp = sdEllipsoid(ax, y, z, 0.335, 0.21, 0.07, 0.20, 0.175, 0.29);
+        const dCereb = sdEllipsoid(ax, y, z, 0.175, 0.17, -0.29, 0.21, 0.155, 0.18);
+
+        let d = smin(dHemi, dTemp, 0.082);
+        d = smin(d, dCereb, 0.062);
+
+        const dBase = 0.006 - y;
+        d = smax(d, dBase, 0.042);
+
+        const baseMask = Math.min(1.0, Math.max(0.0, (y - 0.04) / 0.10));
+        const eyeDistL = Math.hypot(x + 0.175, y - 0.275, z - 0.395);
+        const eyeDistR = Math.hypot(x - 0.175, y - 0.275, z - 0.395);
+        const eyeDist = Math.min(eyeDistL, eyeDistR);
+        const faceMask = Math.min(1.0, Math.max(0.0, (eyeDist - 0.115) / 0.075));
+
+        const longProfile = Math.exp(-Math.pow(x / 0.034, 2));
+        const crownArch = Math.min(1.0, Math.max(0.0, (y - 0.11) / 0.22));
+        const longCarve = 0.052 * longProfile * crownArch;
+
+        const sylvianSeam = Math.abs(dHemi - dTemp);
+        const sylvianMask = Math.exp(-Math.pow(sylvianSeam / 0.042, 2)) * (ax > 0.24 ? 1.0 : 0.0) * (z > -0.18 ? 1.0 : 0.0);
+        const sylvianCarve = 0.025 * sylvianMask * baseMask * faceMask;
+
+        const transSeam = Math.abs(Math.min(dHemi, dTemp) - dCereb);
+        const transMask = Math.exp(-Math.pow(transSeam / 0.045, 2)) * (z < -0.10 ? 1.0 : 0.0);
+        const transCarve = 0.028 * transMask * baseMask;
+
+        const cerebWeight = Math.max(0.0, Math.min(1.0, 1.0 - (dCereb + 0.02) / 0.09)) * (z < -0.14 ? 1.0 : 0.0);
+
+        const freq = 5.4;
+        const wx = noise3D(x * 3.8 + 1.3, y * 3.8 + 4.1, z * 3.8 - 2.7) * 0.26;
+        const wy = noise3D(x * 3.8 - 5.2, y * 3.8 + 0.7, z * 3.8 + 3.4) * 0.26;
+        const wz = noise3D(x * 3.8 + 2.9, y * 3.8 - 3.6, z * 3.8 + 1.1) * 0.26;
+
+        const n1 = noise3D(x * freq + wx, y * freq + wy, z * freq + wz);
+        const n2 = noise3D(x * freq * 1.45 - wz + 7.1, y * freq * 1.45 + wx - 3.2, z * freq * 1.45 + wy + 5.4);
+
+        const g1 = Math.exp(-Math.pow(n1 / 0.145, 2));
+        const g2 = 0.65 * Math.exp(-Math.pow(n2 / 0.135, 2));
+        const corticalGroove = Math.min(1.0, g1 + g2 * (1.0 - 0.5 * g1));
+        const sulciCarve = 0.024 * corticalGroove * (1.0 - cerebWeight) * baseMask * faceMask;
+
+        const foliaWave = Math.sin(y * 78.0 + 4.5 * noise3D(x * 6.0, y * 6.0, z * 6.0));
+        const foliaGroove = Math.exp(-Math.pow(foliaWave / 0.32, 2));
+        const foliaCarve = 0.013 * foliaGroove * cerebWeight * baseMask;
+
+        const socketCarve = 0.022 * Math.exp(-Math.pow(eyeDist / 0.105, 2));
+
+        const mouthDx = x / 0.068;
+        const mouthDy = (y - 0.195 + 0.012 * (1.0 - mouthDx * mouthDx)) / 0.028;
+        const mouthDz = (z - 0.39) / 0.055;
+        const mouthDist2 = mouthDx * mouthDx + mouthDy * mouthDy + mouthDz * mouthDz;
+        const mouthCarve = 0.026 * Math.exp(-mouthDist2 * 1.6);
+
+        const totalCarve = longCarve + sylvianCarve + transCarve + sulciCarve + foliaCarve + socketCarve + mouthCarve;
+        if (outSulcus) {
+          outSulcus.depth = Math.min(1.0, (longCarve * 1.4 + sylvianCarve * 1.5 + transCarve * 1.4 + sulciCarve * 1.6 + foliaCarve * 1.5 + mouthCarve * 1.3) / 0.036);
+        }
+        return d + totalCarve;
+      }
+
+      // =========================================================================
+      // 4. SURFACE NETS POLYGONISER (~1.7 mm grid)
+      // =========================================================================
+      function buildSurfaceNetsMesh() {
+        const h = 0.0175;
+        const xmin = -0.61, xmax = 0.61;
+        const ymin = -0.035, ymax = 0.785;
+        const zmin = -0.52, zmax = 0.50;
+
+        const nx = Math.ceil((xmax - xmin) / h) + 1;
+        const ny = Math.ceil((ymax - ymin) / h) + 1;
+        const nz = Math.ceil((zmax - zmin) / h) + 1;
+
+        const nxy = nx * ny;
+        const totalGrid = nx * ny * nz;
+        const sdfGrid = new Float32Array(totalGrid);
+
+        for (let iz = 0; iz < nz; iz++) {
+          const z = zmin + iz * h;
+          for (let iy = 0; iy < ny; iy++) {
+            const y = ymin + iy * h;
+            const rowOffset = iz * nxy + iy * nx;
+            for (let ix = 0; ix < nx; ix++) {
+              const x = xmin + ix * h;
+              sdfGrid[rowOffset + ix] = evalSkinSDFWithSulcus(x, y, z, null);
+            }
+          }
+        }
+
+        const cornerOffsets = [
+          [0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0],
+          [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]
+        ];
+        const cubeEdges = [
+          [0, 1], [2, 3], [4, 5], [6, 7],
+          [0, 2], [1, 3], [4, 6], [5, 7],
+          [0, 4], [1, 5], [2, 6], [3, 7]
+        ];
+
+        const cellToVert = new Int32Array(totalGrid);
+        cellToVert.fill(-1);
+
+        const vertPos = [];
+        const cVals = new Float32Array(8);
+
+        for (let iz = 0; iz < nz - 1; iz++) {
+          for (let iy = 0; iy < ny - 1; iy++) {
+            for (let ix = 0; ix < nx - 1; ix++) {
+              let mask = 0;
+              for (let c = 0; c < 8; c++) {
+                const co = cornerOffsets[c];
+                const idx = (iz + co[2]) * nxy + (iy + co[1]) * nx + (ix + co[0]);
+                const val = sdfGrid[idx];
+                cVals[c] = val;
+                if (val < 0.0) mask |= (1 << c);
+              }
+              if (mask === 0 || mask === 255) continue;
+
+              let sx = 0, sy = 0, sz = 0, count = 0;
+              for (let e = 0; e < 12; e++) {
+                const c0 = cubeEdges[e][0];
+                const c1 = cubeEdges[e][1];
+                const v0 = cVals[c0];
+                const v1 = cVals[c1];
+                if ((v0 < 0.0) !== (v1 < 0.0)) {
+                  const t = v0 / (v0 - v1);
+                  const o0 = cornerOffsets[c0];
+                  const o1 = cornerOffsets[c1];
+                  sx += ix + o0[0] + t * (o1[0] - o0[0]);
+                  sy += iy + o0[1] + t * (o1[1] - o0[1]);
+                  sz += iz + o0[2] + t * (o1[2] - o0[2]);
+                  count++;
+                }
+              }
+
+              const vIdx = vertPos.length / 3;
+              cellToVert[iz * nxy + iy * nx + ix] = vIdx;
+              vertPos.push(
+                xmin + (sx / count) * h,
+                ymin + (sy / count) * h,
+                zmin + (sz / count) * h
+              );
+            }
+          }
+        }
+
+        const indices = [];
+        for (let iz = 1; iz < nz - 1; iz++) {
+          for (let iy = 1; iy < ny - 1; iy++) {
+            for (let ix = 1; ix < nx - 1; ix++) {
+              const idx0 = iz * nxy + iy * nx + ix;
+              const s0 = sdfGrid[idx0] < 0.0;
+
+              const sX = sdfGrid[idx0 + 1] < 0.0;
+              if (s0 !== sX) {
+                const v0 = cellToVert[(iz - 1) * nxy + (iy - 1) * nx + ix];
+                const v1 = cellToVert[(iz - 1) * nxy + iy * nx + ix];
+                const v2 = cellToVert[iz * nxy + iy * nx + ix];
+                const v3 = cellToVert[iz * nxy + (iy - 1) * nx + ix];
+                if (v0 >= 0 && v1 >= 0 && v2 >= 0 && v3 >= 0) {
+                  if (s0) indices.push(v0, v1, v2, v0, v2, v3);
+                  else indices.push(v0, v2, v1, v0, v3, v2);
+                }
+              }
+
+              const sY = sdfGrid[idx0 + nx] < 0.0;
+              if (s0 !== sY) {
+                const v0 = cellToVert[(iz - 1) * nxy + iy * nx + (ix - 1)];
+                const v1 = cellToVert[iz * nxy + iy * nx + (ix - 1)];
+                const v2 = cellToVert[iz * nxy + iy * nx + ix];
+                const v3 = cellToVert[(iz - 1) * nxy + iy * nx + ix];
+                if (v0 >= 0 && v1 >= 0 && v2 >= 0 && v3 >= 0) {
+                  if (s0) indices.push(v0, v1, v2, v0, v2, v3);
+                  else indices.push(v0, v2, v1, v0, v3, v2);
+                }
+              }
+
+              const sZ = sdfGrid[idx0 + nxy] < 0.0;
+              if (s0 !== sZ) {
+                const v0 = cellToVert[iz * nxy + (iy - 1) * nx + (ix - 1)];
+                const v1 = cellToVert[iz * nxy + (iy - 1) * nx + ix];
+                const v2 = cellToVert[iz * nxy + iy * nx + ix];
+                const v3 = cellToVert[iz * nxy + iy * nx + (ix - 1)];
+                if (v0 >= 0 && v1 >= 0 && v2 >= 0 && v3 >= 0) {
+                  if (s0) indices.push(v0, v1, v2, v0, v2, v3);
+                  else indices.push(v0, v2, v1, v0, v3, v2);
+                }
+              }
+            }
+          }
+        }
+
+        const numVerts = vertPos.length / 3;
+        const positions = new Float32Array(vertPos);
+        const normals = new Float32Array(numVerts * 3);
+        const sulcusAttr = new Float32Array(numVerts);
+        const sulcusTmp = { depth: 0 };
+
+        const eps = 0.0022;
+        for (let i = 0; i < numVerts; i++) {
+          let vx = positions[i * 3];
+          let vy = positions[i * 3 + 1];
+          let vz = positions[i * 3 + 2];
+
+          for (let iter = 0; iter < 2; iter++) {
+            const d = evalSkinSDFWithSulcus(vx, vy, vz, sulcusTmp);
+            const gx = evalSkinSDFWithSulcus(vx + eps, vy, vz, null) - evalSkinSDFWithSulcus(vx - eps, vy, vz, null);
+            const gy = evalSkinSDFWithSulcus(vx, vy + eps, vz, null) - evalSkinSDFWithSulcus(vx, vy - eps, vz, null);
+            const gz = evalSkinSDFWithSulcus(vx, vy, vz + eps, null) - evalSkinSDFWithSulcus(vx, vy, vz - eps, null);
+            const glen = Math.hypot(gx, gy, gz) || 1.0;
+            const nx0 = gx / glen;
+            const ny0 = gy / glen;
+            const nz0 = gz / glen;
+            vx -= d * nx0 * 0.65;
+            vy -= d * ny0 * 0.65;
+            vz -= d * nz0 * 0.65;
+            normals[i * 3] = nx0;
+            normals[i * 3 + 1] = ny0;
+            normals[i * 3 + 2] = nz0;
+          }
+
+          evalSkinSDFWithSulcus(vx, vy, vz, sulcusTmp);
+          positions[i * 3] = vx;
+          positions[i * 3 + 1] = vy;
+          positions[i * 3 + 2] = vz;
+          sulcusAttr[i] = sulcusTmp.depth;
+        }
+
+        return {
+          positions,
+          restPositions: new Float32Array(positions),
+          normals,
+          restNormals: new Float32Array(normals),
+          sulcusAttr,
+          indices: new Uint32Array(indices),
+          numVerts
+        };
+      }
+
+      // =========================================================================
+      // 5. BCC TETRAHEDRAL LATTICE STUFFING & XPBD CO-ROTATIONAL SOLVER
+      // =========================================================================
+      function buildBCCTetrahedralLattice() {
+        const spacing = 0.145;
+        const xmin = -0.60, xmax = 0.60;
+        const ymin = 0.0, ymax = 0.76;
+        const zmin = -0.50, zmax = 0.48;
+
+        const nx = Math.ceil((xmax - xmin) / spacing);
+        const ny = Math.ceil((ymax - ymin) / spacing);
+        const nz = Math.ceil((zmax - zmin) / spacing);
+
+        const cornerMap = new Map();
+        const centerMap = new Map();
+        const rawNodes = [];
+
+        function getCornerIdx(ix, iy, iz) {
+          const key = `${ix},${iy},${iz}`;
+          let idx = cornerMap.get(key);
+          if (idx === undefined) {
+            idx = rawNodes.length / 3;
+            rawNodes.push(xmin + ix * spacing, ymin + iy * spacing, zmin + iz * spacing);
+            cornerMap.set(key, idx);
+          }
+          return idx;
+        }
+
+        function getCenterIdx(ix, iy, iz) {
+          const key = `${ix},${iy},${iz}`;
+          let idx = centerMap.get(key);
+          if (idx === undefined) {
+            idx = rawNodes.length / 3;
+            rawNodes.push(
+              xmin + (ix + 0.5) * spacing,
+              ymin + (iy + 0.5) * spacing,
+              zmin + (iz + 0.5) * spacing
+            );
+            centerMap.set(key, idx);
+          }
+          return idx;
+        }
+
+        const rawTets = [];
+        const faceTris = [
+          [[0, 0, 0], [0, 0, 1], [0, 1, 1]],
+          [[0, 0, 0], [0, 1, 1], [0, 1, 0]],
+          [[1, 0, 0], [1, 1, 0], [1, 1, 1]],
+          [[1, 0, 0], [1, 1, 1], [1, 0, 1]],
+          [[0, 0, 0], [1, 0, 0], [1, 0, 1]],
+          [[0, 0, 0], [1, 0, 1], [0, 0, 1]],
+          [[0, 1, 0], [0, 1, 1], [1, 1, 1]],
+          [[0, 1, 0], [1, 1, 1], [1, 1, 0]],
+          [[0, 0, 0], [0, 1, 0], [1, 1, 0]],
+          [[0, 0, 0], [1, 1, 0], [1, 0, 0]],
+          [[0, 0, 1], [1, 0, 1], [1, 1, 1]],
+          [[0, 0, 1], [1, 1, 1], [0, 1, 1]]
+        ];
+
+        for (let iz = 0; iz < nz; iz++) {
+          for (let iy = 0; iy < ny; iy++) {
+            for (let ix = 0; ix < nx; ix++) {
+              const cIdx = getCenterIdx(ix, iy, iz);
+              const cx = rawNodes[cIdx * 3];
+              const cy = rawNodes[cIdx * 3 + 1];
+              const cz = rawNodes[cIdx * 3 + 2];
+              const dCenter = evalHullSDF(cx, cy, cz);
+              if (dCenter > spacing * 0.65) continue;
+
+              for (let f = 0; f < 12; f++) {
+                const tri = faceTris[f];
+                const i0 = getCornerIdx(ix + tri[0][0], iy + tri[0][1], iz + tri[0][2]);
+                const i1 = getCornerIdx(ix + tri[1][0], iy + tri[1][1], iz + tri[1][2]);
+                const i2 = getCornerIdx(ix + tri[2][0], iy + tri[2][1], iz + tri[2][2]);
+
+                const mx = 0.25 * (cx + rawNodes[i0 * 3] + rawNodes[i1 * 3] + rawNodes[i2 * 3]);
+                const my = 0.25 * (cy + rawNodes[i0 * 3 + 1] + rawNodes[i1 * 3 + 1] + rawNodes[i2 * 3 + 1]);
+                const mz = 0.25 * (cz + rawNodes[i0 * 3 + 2] + rawNodes[i1 * 3 + 2] + rawNodes[i2 * 3 + 2]);
+                if (evalHullSDF(mx, my, mz) < 0.032) {
+                  rawTets.push(cIdx, i0, i1, i2);
+                }
+              }
+            }
+          }
+        }
+
+        const usedMap = new Int32Array(rawNodes.length / 3);
+        usedMap.fill(-1);
+        const nodes = [];
+        const tets = [];
+
+        for (let i = 0; i < rawTets.length; i++) {
+          const oldIdx = rawTets[i];
+          let newIdx = usedMap[oldIdx];
+          if (newIdx === -1) {
+            newIdx = nodes.length / 3;
+            usedMap[oldIdx] = newIdx;
+            nodes.push(rawNodes[oldIdx * 3], rawNodes[oldIdx * 3 + 1], rawNodes[oldIdx * 3 + 2]);
+          }
+          tets.push(newIdx);
+        }
+
+        const numParticles = nodes.length / 3;
+        const pos = new Float32Array(nodes);
+
+        const eps = 0.004;
+        for (let i = 0; i < numParticles; i++) {
+          let px = pos[i * 3];
+          let py = pos[i * 3 + 1];
+          let pz = pos[i * 3 + 2];
+          const d = evalHullSDF(px, py, pz);
+          if (d > 0.0) {
+            const gx = evalHullSDF(px + eps, py, pz) - evalHullSDF(px - eps, py, pz);
+            const gy = evalHullSDF(px, py + eps, pz) - evalHullSDF(px, py - eps, pz);
+            const gz = evalHullSDF(px, py, pz + eps) - evalHullSDF(px, py, pz - eps);
+            const glen = Math.hypot(gx, gy, gz) || 1.0;
+            px -= d * (gx / glen) * 0.88;
+            py -= d * (gy / glen) * 0.88;
+            pz -= d * (gz / glen) * 0.88;
+            if (py < 0.006) py = 0.006;
+            pos[i * 3] = px;
+            pos[i * 3 + 1] = py;
+            pos[i * 3 + 2] = pz;
+          }
+        }
+
+        const validTets = [];
+        const restVolumes = [];
+        const invDm = [];
+        let totalRestVolume = 0;
+
+        for (let t = 0; t < tets.length / 4; t++) {
+          let i0 = tets[t * 4];
+          let i1 = tets[t * 4 + 1];
+          let i2 = tets[t * 4 + 2];
+          let i3 = tets[t * 4 + 3];
+
+          const x0 = pos[i0 * 3], y0 = pos[i0 * 3 + 1], z0 = pos[i0 * 3 + 2];
+          let e1x = pos[i1 * 3] - x0, e1y = pos[i1 * 3 + 1] - y0, e1z = pos[i1 * 3 + 2] - z0;
+          let e2x = pos[i2 * 3] - x0, e2y = pos[i2 * 3 + 1] - y0, e2z = pos[i2 * 3 + 2] - z0;
+          const e3x = pos[i3 * 3] - x0, e3y = pos[i3 * 3 + 1] - y0, e3z = pos[i3 * 3 + 2] - z0;
+
+          let det = e1x * (e2y * e3z - e2z * e3y) - e1y * (e2x * e3z - e2z * e3x) + e1z * (e2x * e3y - e2y * e3x);
+          if (Math.abs(det) < 1e-6) continue;
+          if (det < 0) {
+            const tmp = i1; i1 = i2; i2 = tmp;
+            det = -det;
+            e1x = pos[i1 * 3] - x0; e1y = pos[i1 * 3 + 1] - y0; e1z = pos[i1 * 3 + 2] - z0;
+            e2x = pos[i2 * 3] - x0; e2y = pos[i2 * 3 + 1] - y0; e2z = pos[i2 * 3 + 2] - z0;
+          }
+
+          const vol = det / 6.0;
+          validTets.push(i0, i1, i2, i3);
+          restVolumes.push(vol);
+          totalRestVolume += vol;
+
+          const invDet = 1.0 / det;
+          invDm.push(
+            (e2y * e3z - e2z * e3y) * invDet,
+            (e1z * e3y - e1y * e3z) * invDet,
+            (e1y * e2z - e1z * e2y) * invDet,
+
+            (e2z * e3x - e2x * e3z) * invDet,
+            (e1x * e3z - e1z * e3x) * invDet,
+            (e1z * e2x - e1x * e2z) * invDet,
+
+            (e2x * e3y - e2y * e3x) * invDet,
+            (e1y * e3x - e1x * e3y) * invDet,
+            (e1x * e2y - e1y * e2x) * invDet
+          );
+        }
+
+        const edgeSet = new Set();
+        const edges = [];
+        const restEdgeLengths = [];
+        const tetPairs = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+        const numTets = validTets.length / 4;
+
+        for (let t = 0; t < numTets; t++) {
+          const base = t * 4;
+          for (let p = 0; p < 6; p++) {
+            const a = validTets[base + tetPairs[p][0]];
+            const b = validTets[base + tetPairs[p][1]];
+            const lo = Math.min(a, b), hi = Math.max(a, b);
+            const key = lo * 65536 + hi;
+            if (!edgeSet.has(key)) {
+              edgeSet.add(key);
+              edges.push(lo, hi);
+              const dx = pos[hi * 3] - pos[lo * 3];
+              const dy = pos[hi * 3 + 1] - pos[lo * 3 + 1];
+              const dz = pos[hi * 3 + 2] - pos[lo * 3 + 2];
+              restEdgeLengths.push(Math.hypot(dx, dy, dz));
+            }
+          }
+        }
+
+        const invMass = new Float32Array(numParticles);
+        for (let t = 0; t < numTets; t++) {
+          const wQuarter = restVolumes[t] * 0.25;
+          invMass[validTets[t * 4]] += wQuarter;
+          invMass[validTets[t * 4 + 1]] += wQuarter;
+          invMass[validTets[t * 4 + 2]] += wQuarter;
+          invMass[validTets[t * 4 + 3]] += wQuarter;
+        }
+        for (let i = 0; i < numParticles; i++) {
+          invMass[i] = invMass[i] > 1e-8 ? 1.0 / invMass[i] : 0.0;
+        }
+
+        const tetQuats = new Float32Array(numTets * 4);
+        for (let t = 0; t < numTets; t++) {
+          tetQuats[t * 4 + 3] = 1.0;
+        }
+
+        return {
+          numParticles,
+          numTets,
+          pos,
+          prevPos: new Float32Array(pos),
+          restPos: new Float32Array(pos),
+          vel: new Float32Array(numParticles * 3),
+          invMass,
+          tets: new Uint32Array(validTets),
+          restVolumes: new Float32Array(restVolumes),
+          invDm: new Float32Array(invDm),
+          tetQuats,
+          edges: new Uint32Array(edges),
+          restEdgeLengths: new Float32Array(restEdgeLengths),
+          totalRestVolume,
+          particleCofactors: new Float32Array(numParticles * 9)
+        };
+      }
+
+      function computeBarycentricEmbeddings(targetPositions, numTargets, lattice) {
+        const { numTets, tets, restPos, invDm } = lattice;
+        const tetCentroids = new Float32Array(numTets * 3);
+        for (let t = 0; t < numTets; t++) {
+          const i0 = tets[t * 4], i1 = tets[t * 4 + 1], i2 = tets[t * 4 + 2], i3 = tets[t * 4 + 3];
+          tetCentroids[t * 3] = 0.25 * (restPos[i0 * 3] + restPos[i1 * 3] + restPos[i2 * 3] + restPos[i3 * 3]);
+          tetCentroids[t * 3 + 1] = 0.25 * (restPos[i0 * 3 + 1] + restPos[i1 * 3 + 1] + restPos[i2 * 3 + 1] + restPos[i3 * 3 + 1]);
+          tetCentroids[t * 3 + 2] = 0.25 * (restPos[i0 * 3 + 2] + restPos[i1 * 3 + 2] + restPos[i2 * 3 + 2] + restPos[i3 * 3 + 2]);
+        }
+
+        const embedTet = new Uint32Array(numTargets);
+        const embedWeights = new Float32Array(numTargets * 4);
+
+        for (let v = 0; v < numTargets; v++) {
+          const px = targetPositions[v * 3];
+          const py = targetPositions[v * 3 + 1];
+          const pz = targetPositions[v * 3 + 2];
+
+          let bestTet = 0;
+          let bestViolation = Infinity;
+          let bestW0 = 0.25, bestW1 = 0.25, bestW2 = 0.25, bestW3 = 0.25;
+
+          for (let t = 0; t < numTets; t++) {
+            const dxC = px - tetCentroids[t * 3];
+            const dyC = py - tetCentroids[t * 3 + 1];
+            const dzC = pz - tetCentroids[t * 3 + 2];
+            const dist2 = dxC * dxC + dyC * dyC + dzC * dzC;
+            if (dist2 > 0.085 && bestViolation < Infinity) continue;
+
+            const i0 = tets[t * 4];
+            const rx = px - restPos[i0 * 3];
+            const ry = py - restPos[i0 * 3 + 1];
+            const rz = pz - restPos[i0 * 3 + 2];
+
+            const m = t * 9;
+            const w1 = invDm[m] * rx + invDm[m + 3] * ry + invDm[m + 6] * rz;
+            const w2 = invDm[m + 1] * rx + invDm[m + 4] * ry + invDm[m + 7] * rz;
+            const w3 = invDm[m + 2] * rx + invDm[m + 5] * ry + invDm[m + 8] * rz;
+            const w0 = 1.0 - w1 - w2 - w3;
+
+            const minW = Math.min(w0, w1, w2, w3);
+            const maxW = Math.max(w0, w1, w2, w3);
+            const violation = Math.max(0.0, -minW) + Math.max(0.0, maxW - 1.0) + dist2 * 0.35;
+
+            if (violation < bestViolation) {
+              bestViolation = violation;
+              bestTet = t;
+              bestW0 = w0; bestW1 = w1; bestW2 = w2; bestW3 = w3;
+              if (minW >= -0.005 && maxW <= 1.005) break;
+            }
+          }
+
+          embedTet[v] = bestTet;
+          embedWeights[v * 4] = bestW0;
+          embedWeights[v * 4 + 1] = bestW1;
+          embedWeights[v * 4 + 2] = bestW2;
+          embedWeights[v * 4 + 3] = bestW3;
+        }
+
+        return { embedTet, embedWeights };
+      }
+
+      // =========================================================================
+      // 6. INITIALISE GEOMETRY, PHYSICS LATTICE, SPARKS & BUBBLES
+      // =========================================================================
+      const skinData = buildSurfaceNetsMesh();
+      const lattice = buildBCCTetrahedralLattice();
+      const skinBinding = computeBarycentricEmbeddings(skinData.restPositions, skinData.numVerts, lattice);
+
+      function findSocketParticles(cx, cy, cz) {
+        const list = [];
+        for (let i = 0; i < lattice.numParticles; i++) {
+          const dx = lattice.restPos[i * 3] - cx;
+          const dy = lattice.restPos[i * 3 + 1] - cy;
+          const dz = lattice.restPos[i * 3 + 2] - cz;
+          const d = Math.hypot(dx, dy, dz);
+          if (d < 0.24) {
+            list.push({ idx: i, weight: Math.exp(-d * d / 0.025) });
+          }
+        }
+        return list;
+      }
+
+      const leftEyeCluster = findSocketParticles(-0.175, 0.275, 0.375);
+      const rightEyeCluster = findSocketParticles(0.175, 0.275, 0.375);
+
+      const NUM_THREADS = 30;
+      const PTS_PER_THREAD = 8;
+      const totalThreadPts = NUM_THREADS * PTS_PER_THREAD;
+      const threadRestPositions = new Float32Array(totalThreadPts * 3);
+
+      for (let th = 0; th < NUM_THREADS; th++) {
+        const side = (th % 2 === 0) ? -1 : 1;
+        let px = side * (0.09 + Math.random() * 0.28);
+        let py = 0.14 + Math.random() * 0.42;
+        let pz = -0.28 + Math.random() * 0.54;
+
+        let dirX = (Math.random() - 0.5) * 0.9;
+        let dirY = (Math.random() - 0.5) * 0.9;
+        let dirZ = (Math.random() - 0.5) * 0.9;
+
+        for (let s = 0; s < PTS_PER_THREAD; s++) {
+          const idx = (th * PTS_PER_THREAD + s) * 3;
+          const d = evalHullSDF(px, py, pz);
+          if (d > -0.04) {
+            px *= 0.82;
+            py = 0.32 + (py - 0.32) * 0.78;
+            pz *= 0.82;
+          }
+          threadRestPositions[idx] = px;
+          threadRestPositions[idx + 1] = py;
+          threadRestPositions[idx + 2] = pz;
+
+          dirX += (Math.random() - 0.5) * 0.8;
+          dirY += (Math.random() - 0.5) * 0.8;
+          dirZ += (Math.random() - 0.5) * 0.8;
+          const len = Math.hypot(dirX, dirY, dirZ) || 1.0;
+          dirX /= len; dirY /= len; dirZ /= len;
+          px += dirX * 0.068;
+          py += dirY * 0.068;
+          pz += dirZ * 0.068;
+        }
+      }
+      const threadBinding = computeBarycentricEmbeddings(threadRestPositions, totalThreadPts, lattice);
+
+      const NUM_BUBBLES = 75;
+      const bubbleRestPos = new Float32Array(NUM_BUBBLES * 3);
+      const bubbleScales = new Float32Array(NUM_BUBBLES);
+      for (let b = 0; b < NUM_BUBBLES; b++) {
+        let bx = 0, by = 0.3, bz = 0;
+        for (let tries = 0; tries < 25; tries++) {
+          bx = (Math.random() * 2 - 1) * 0.44;
+          by = 0.08 + Math.random() * 0.54;
+          bz = (Math.random() * 2 - 1) * 0.38;
+          if (evalHullSDF(bx, by, bz) < -0.035) break;
+        }
+        bubbleRestPos[b * 3] = bx;
+        bubbleRestPos[b * 3 + 1] = by;
+        bubbleRestPos[b * 3 + 2] = bz;
+        bubbleScales[b] = 0.005 + Math.pow(Math.random(), 2.2) * 0.014;
+      }
+      const bubbleBinding = computeBarycentricEmbeddings(bubbleRestPos, NUM_BUBBLES, lattice);
+
+      // =========================================================================
+      // 7. WEBGL2 RENDERER & SIX THREE.SCENE PASSES
+      // =========================================================================
+      const container = document.getElementById('canvas-wrap');
+      const canvas = document.createElement('canvas');
+      container.appendChild(canvas);
+
+      const gl2 = canvas.getContext('webgl2', {
+        alpha: false,
+        antialias: true,
+        powerPreference: 'high-performance'
+      });
+
+      const renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        context: gl2 || undefined,
+        antialias: true,
+        powerPreference: 'high-performance'
+      });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.autoClear = false;
+
+      const isWebGL2 = renderer.capabilities.isWebGL2;
+      const supportsHalfFloatLinear = isWebGL2 && renderer.extensions.has('OES_texture_float_linear');
+      const rtDataType = supportsHalfFloatLinear ? THREE.HalfFloatType : THREE.UnsignedByteType;
+      document.getElementById('status-text').textContent = (isWebGL2 ? 'WEBGL2' : 'WEBGL') + ' · ALIVE';
+
+      const camera = new THREE.PerspectiveCamera(34, container.clientWidth / container.clientHeight, 0.1, 25.0);
+      const orbit = {
+        yaw: 0.0,
+        pitch: 0.30,
+        distance: 2.55,
+        targetYaw: 0.0,
+        targetPitch: 0.30,
+        targetDistance: 2.55,
+        lookAt: new THREE.Vector3(0.0, 0.31, 0.0)
+      };
+
+      function updateCameraTransform() {
+        orbit.yaw += (orbit.targetYaw - orbit.yaw) * 0.14;
+        orbit.pitch += (orbit.targetPitch - orbit.pitch) * 0.14;
+        orbit.distance += (orbit.targetDistance - orbit.distance) * 0.14;
+
+        const cp = Math.cos(orbit.pitch);
+        camera.position.set(
+          orbit.lookAt.x + orbit.distance * Math.sin(orbit.yaw) * cp,
+          orbit.lookAt.y + orbit.distance * Math.sin(orbit.pitch),
+          orbit.lookAt.z + orbit.distance * Math.cos(orbit.yaw) * cp
+        );
+        camera.lookAt(orbit.lookAt);
+      }
+      updateCameraTransform();
+
+      const rtWidth = Math.max(1, Math.floor(container.clientWidth * renderer.getPixelRatio()));
+      const rtHeight = Math.max(1, Math.floor(container.clientHeight * renderer.getPixelRatio()));
+
+      const shadowCamera = new THREE.OrthographicCamera(-1.45, 1.45, 1.45, -1.45, 0.2, 6.0);
+      shadowCamera.position.set(-0.65, 2.85, 0.72);
+      shadowCamera.lookAt(0, 0.2, 0);
+      shadowCamera.updateMatrixWorld();
+      shadowCamera.updateProjectionMatrix();
+
+      const shadowRT = new THREE.WebGLRenderTarget(1024, 1024, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        type: THREE.UnsignedByteType
+      });
+
+      const aoCamera = new THREE.OrthographicCamera(-1.35, 1.35, 1.35, -1.35, 0.0, 1.2);
+      aoCamera.position.set(0.0, 0.95, 0.0);
+      aoCamera.up.set(0, 0, -1);
+      aoCamera.lookAt(0, 0, 0);
+      aoCamera.updateMatrixWorld();
+      aoCamera.updateProjectionMatrix();
+
+      const aoRT = new THREE.WebGLRenderTarget(512, 512, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        type: THREE.UnsignedByteType
+      });
+
+      const sceneRT = new THREE.WebGLRenderTarget(rtWidth, rtHeight, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        type: rtDataType,
+        depthBuffer: true
+      });
+
+      const backDepthRT = new THREE.WebGLRenderTarget(rtWidth, rtHeight, {
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+        format: THREE.RGBAFormat,
+        type: rtDataType,
+        depthBuffer: true
+      });
+
+      const compositeRT = new THREE.WebGLRenderTarget(rtWidth, rtHeight, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        type: rtDataType,
+        depthBuffer: true
+      });
+
+      const brainGeometry = new THREE.BufferGeometry();
+      const posAttr = new THREE.BufferAttribute(skinData.positions, 3);
+      posAttr.setUsage(THREE.DynamicDrawUsage);
+      const normAttr = new THREE.BufferAttribute(skinData.normals, 3);
+      normAttr.setUsage(THREE.DynamicDrawUsage);
+      const restPosAttr = new THREE.BufferAttribute(skinData.restPositions, 3);
+      const sulcusBufAttr = new THREE.BufferAttribute(skinData.sulcusAttr, 1);
+
+      brainGeometry.setAttribute('position', posAttr);
+      brainGeometry.setAttribute('normal', normAttr);
+      brainGeometry.setAttribute('aRestPos', restPosAttr);
+      brainGeometry.setAttribute('aSulcus', sulcusBufAttr);
+      brainGeometry.setIndex(new THREE.BufferAttribute(skinData.indices, 1));
+
+      // =========================================================================
+      // PASS 1 SCENE: Key-light shadow map (PCSS-lite)
+      // =========================================================================
+      const shadowScene = new THREE.Scene();
+      const shadowMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying float vDepth;
+          varying float vNormalY;
+          void main() {
+            vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            vDepth = pos.z * 0.5 + 0.5;
+            vNormalY = abs(normal.y);
+            gl_Position = pos;
+          }
+        `,
+        fragmentShader: `
+          varying float vDepth;
+          varying float vNormalY;
+          void main() {
+            gl_FragColor = vec4(vDepth, vNormalY, 1.0, 1.0);
+          }
+        `,
+        side: THREE.DoubleSide
+      });
+      const shadowBrainMesh = new THREE.Mesh(brainGeometry, shadowMat);
+      shadowScene.add(shadowBrainMesh);
+
+      // =========================================================================
+      // PASS 2 SCENE: Top-down contact AO
+      // =========================================================================
+      const aoScene = new THREE.Scene();
+      const aoMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying float vHeight;
+          void main() {
+            vec4 worldPos = modelMatrix * vec4(position, 1.0);
+            vHeight = worldPos.y;
+            gl_Position = projectionMatrix * viewMatrix * worldPos;
+          }
+        `,
+        fragmentShader: `
+          varying float vHeight;
+          void main() {
+            float contact = 1.0 - smoothstep(0.0, 0.34, vHeight);
+            float softShadow = 1.0 - smoothstep(0.0, 0.72, vHeight);
+            gl_FragColor = vec4(contact, softShadow, 0.0, 1.0);
+          }
+        `,
+        side: THREE.FrontSide
+      });
+      const aoBrainMesh = new THREE.Mesh(brainGeometry, aoMat);
+      aoScene.add(aoBrainMesh);
+
+      // =========================================================================
+      // PASS 3 SCENE: Night-studio table, candle, eyes, lids, bubbles, sparks
+      // =========================================================================
+      const mainScene = new THREE.Scene();
+      mainScene.background = new THREE.Color(0x0b0611);
+
+      const shadowVPMatrix = new THREE.Matrix4();
+      shadowVPMatrix.multiplyMatrices(shadowCamera.projectionMatrix, shadowCamera.matrixWorldInverse);
+
+      const aoVPMatrix = new THREE.Matrix4();
+      aoVPMatrix.multiplyMatrices(aoCamera.projectionMatrix, aoCamera.matrixWorldInverse);
+
+      const candlePos = new THREE.Vector3(0.76, 0.0, 0.04);
+
+      const tableUniforms = {
+        uShadowMap: { value: shadowRT.texture },
+        uAOMap: { value: aoRT.texture },
+        uShadowVP: { value: shadowVPMatrix },
+        uAOVP: { value: aoVPMatrix },
+        uShadowTint: { value: FLAVOURS.raspberry.shadowTint.clone() },
+        uSparkColor: { value: new THREE.Vector3(1.0, 0.86, 0.55) },
+        uSparkIntensity: { value: 0.25 },
+        uBrainCenter: { value: new THREE.Vector3(0, 0.28, 0) },
+        uCandleFlamePos: { value: new THREE.Vector3(candlePos.x, 0.23, candlePos.z) },
+        uCandleFlicker: { value: 1.0 },
+        uTime: { value: 0.0 }
+      };
+
+      const tableGeo = new THREE.PlaneGeometry(14, 14, 1, 1);
+      tableGeo.rotateX(-Math.PI / 2);
+      const tableMat = new THREE.ShaderMaterial({
+        uniforms: tableUniforms,
+        vertexShader: `
+          varying vec3 vWorldPos;
+          varying vec4 vShadowCoord;
+          varying vec4 vAOCoord;
+          uniform mat4 uShadowVP;
+          uniform mat4 uAOVP;
+          void main() {
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            vShadowCoord = uShadowVP * wp;
+            vAOCoord = uAOVP * wp;
+            gl_Position = projectionMatrix * viewMatrix * wp;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vWorldPos;
+          varying vec4 vShadowCoord;
+          varying vec4 vAOCoord;
+          uniform sampler2D uShadowMap;
+          uniform sampler2D uAOMap;
+          uniform vec3 uShadowTint;
+          uniform vec3 uSparkColor;
+          uniform float uSparkIntensity;
+          uniform vec3 uBrainCenter;
+          uniform vec3 uCandleFlamePos;
+          uniform float uCandleFlicker;
+          uniform float uTime;
+
+          float hash21(vec2 p) {
+            p = fract(p * vec2(123.34, 456.21));
+            p += dot(p, p + 45.32);
+            return fract(p.x * p.y);
+          }
+
+          void main() {
+            float dist = length(vWorldPos.xz);
+            float vignette = exp(-dist * dist * 0.28);
+
+            vec3 baseCol = mix(vec3(0.032, 0.018, 0.050), vec3(0.145, 0.092, 0.195), vignette);
+
+            float grain = (hash21(vWorldPos.xz * vec2(35.0, 180.0)) - 0.5) * 0.012;
+            baseCol += grain * vignette;
+
+            vec2 shUV = vShadowCoord.xy / vShadowCoord.w * 0.5 + 0.5;
+            float shadowMask = 0.0;
+            float edgeTransmission = 0.0;
+            if (shUV.x > 0.01 && shUV.x < 0.99 && shUV.y > 0.01 && shUV.y < 0.99) {
+              vec2 texel = vec2(1.0 / 1024.0);
+              for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                  vec4 s = texture2D(uShadowMap, shUV + vec2(float(x), float(y)) * texel * 3.2);
+                  shadowMask += s.b;
+                  edgeTransmission += s.g * s.b;
+                }
+              }
+              shadowMask /= 25.0;
+              edgeTransmission /= 25.0;
+            }
+
+            vec2 aoUV = vAOCoord.xy / vAOCoord.w * 0.5 + 0.5;
+            float contactAO = 0.0;
+            float broadAO = 0.0;
+            if (aoUV.x > 0.01 && aoUV.x < 0.99 && aoUV.y > 0.01 && aoUV.y < 0.99) {
+              vec2 aoTexel = vec2(1.0 / 512.0);
+              for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                  vec4 a = texture2D(uAOMap, aoUV + vec2(float(x), float(y)) * aoTexel * 2.5);
+                  contactAO += a.r;
+                  broadAO += a.g;
+                }
+              }
+              contactAO /= 9.0;
+              broadAO /= 9.0;
+            }
+
+            vec3 tintedShadow = mix(vec3(0.02, 0.01, 0.03), uShadowTint * 0.55, clamp(edgeTransmission * 0.85, 0.0, 1.0));
+            baseCol = mix(baseCol, tintedShadow, shadowMask * 0.68);
+            baseCol *= (1.0 - contactAO * 0.72) * (1.0 - broadAO * 0.25);
+
+            float dCandle = length(vWorldPos.xz - uCandleFlamePos.xz);
+            float candlePool = exp(-dCandle * dCandle * 6.5) * 0.65 + exp(-dCandle * 2.4) * 0.22;
+            vec3 candleGlow = vec3(1.0, 0.52, 0.18) * candlePool * uCandleFlicker;
+            float saucerOcc = smoothstep(0.055, 0.095, dCandle);
+            baseCol = baseCol * (0.45 + 0.55 * saucerOcc) + candleGlow * saucerOcc;
+
+            float dBrain = length(vWorldPos.xz - uBrainCenter.xz);
+            float sparkSpill = exp(-dBrain * dBrain * 7.2) * uSparkIntensity;
+            baseCol += uSparkColor * sparkSpill * 0.36;
+
+            gl_FragColor = vec4(baseCol, 1.0);
+          }
+        `
+      });
+      const tableMesh = new THREE.Mesh(tableGeo, tableMat);
+      mainScene.add(tableMesh);
+
+      const candleGroup = new THREE.Group();
+      candleGroup.position.copy(candlePos);
+      mainScene.add(candleGroup);
+
+      const saucerGeo = new THREE.CylinderGeometry(0.072, 0.064, 0.012, 32);
+      saucerGeo.translate(0, 0.006, 0);
+      const saucerMat = new THREE.MeshStandardMaterial({
+        color: 0x3b3542,
+        roughness: 0.35,
+        metalness: 0.75
+      });
+      candleGroup.add(new THREE.Mesh(saucerGeo, saucerMat));
+
+      const rimGeo = new THREE.TorusGeometry(0.068, 0.006, 12, 32);
+      rimGeo.rotateX(Math.PI / 2);
+      rimGeo.translate(0, 0.012, 0);
+      candleGroup.add(new THREE.Mesh(rimGeo, saucerMat));
+
+      const waxGeo = new THREE.CylinderGeometry(0.040, 0.045, 0.165, 28);
+      waxGeo.translate(0, 0.092, 0);
+      const waxMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uFlicker: { value: 1.0 }
+        },
+        vertexShader: `
+          varying vec3 vPos;
+          varying vec3 vNormal;
+          void main() {
+            vPos = position;
+            vNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vPos;
+          varying vec3 vNormal;
+          uniform float uFlicker;
+          void main() {
+            float topFactor = smoothstep(0.04, 0.175, vPos.y);
+            vec3 waxBase = vec3(0.56, 0.51, 0.38);
+            vec3 sssWarm = vec3(1.0, 0.58, 0.22) * topFactor * topFactor * 0.95 * uFlicker;
+            float light = 0.45 + 0.55 * max(0.0, vNormal.y * 0.6 + vNormal.z * 0.4);
+            gl_FragColor = vec4(waxBase * light + sssWarm, 1.0);
+          }
+        `
+      });
+      candleGroup.add(new THREE.Mesh(waxGeo, waxMat));
+
+      const wickGeo = new THREE.CylinderGeometry(0.003, 0.003, 0.022, 8);
+      wickGeo.translate(0, 0.182, 0);
+      const wickMat = new THREE.MeshBasicMaterial({ color: 0x1a1210 });
+      candleGroup.add(new THREE.Mesh(wickGeo, wickMat));
+
+      const flameGeo = new THREE.SphereGeometry(0.024, 20, 20);
+      flameGeo.scale(0.72, 1.85, 0.72);
+      flameGeo.translate(0, 0.225, 0);
+      const flameMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0.0 }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          varying vec3 vLocal;
+          uniform float uTime;
+          void main() {
+            vUv = uv;
+            vec3 p = position;
+            float h = clamp((p.y - 0.185) / 0.08, 0.0, 1.0);
+            p.xz *= (1.0 - 0.55 * h * h);
+            p.x += sin(uTime * 11.0 + h * 3.0) * 0.0045 * h;
+            p.z += cos(uTime * 8.7 + h * 2.5) * 0.0035 * h;
+            vLocal = p;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          varying vec3 vLocal;
+          void main() {
+            float h = clamp((vLocal.y - 0.185) / 0.08, 0.0, 1.0);
+            vec3 core = mix(vec3(0.35, 0.55, 1.0), vec3(1.0, 0.94, 0.76), smoothstep(0.0, 0.35, h));
+            vec3 tip = mix(core, vec3(1.0, 0.45, 0.15), smoothstep(0.45, 0.95, h));
+            gl_FragColor = vec4(tip * 1.45, 1.0);
+          }
+        `
+      });
+      candleGroup.add(new THREE.Mesh(flameGeo, flameMat));
+
+      const ambientLight = new THREE.AmbientLight(0x3d2c4e, 0.85);
+      mainScene.add(ambientLight);
+      const keyLight = new THREE.DirectionalLight(0xfff5fa, 1.25);
+      keyLight.position.set(-0.65, 2.85, 0.72);
+      mainScene.add(keyLight);
+
+      // =========================================================================
+      // RIGID CANDY EYES & PLANAR EXPRESSION LIDS
+      // =========================================================================
+      function createEyeUnit() {
+        const root = new THREE.Group();
+
+        const eyeRadius = 0.072;
+        const eyeballGeo = new THREE.SphereGeometry(eyeRadius, 32, 32);
+
+        const eyeUniforms = {
+          uIrisColor: { value: FLAVOURS.raspberry.irisColor.clone() },
+          uGazeOffset: { value: new THREE.Vector2(0, 0) },
+          uPupilScale: { value: 1.0 },
+          uSpiralAmount: { value: 0.0 },
+          uGiggleCrescent: { value: 0.0 },
+          uTime: { value: 0.0 }
+        };
+
+        const eyeballMat = new THREE.ShaderMaterial({
+          uniforms: eyeUniforms,
+          vertexShader: `
+            varying vec3 vLocalNormal;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPos;
+            void main() {
+              vLocalNormal = normalize(position);
+              vec4 wp = modelMatrix * vec4(position, 1.0);
+              vWorldPos = wp.xyz;
+              vWorldNormal = normalize(mat3(modelMatrix) * normal);
+              gl_Position = projectionMatrix * viewMatrix * wp;
+            }
+          `,
+          fragmentShader: `
+            varying vec3 vLocalNormal;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPos;
+            uniform vec3 uIrisColor;
+            uniform vec2 uGazeOffset;
+            uniform float uPupilScale;
+            uniform float uSpiralAmount;
+            uniform float uGiggleCrescent;
+            uniform float uTime;
+
+            void main() {
+              vec2 p = vLocalNormal.xy - uGazeOffset;
+              float r = length(p);
+              float frontMask = step(0.0, vLocalNormal.z);
+
+              vec3 sclera = vec3(0.97, 0.95, 0.98) * (0.65 + 0.35 * max(0.0, vWorldNormal.y * 0.5 + vWorldNormal.z * 0.5));
+              sclera *= smoothstep(0.0, 0.85, vLocalNormal.z + 0.35);
+
+              float irisR = 0.44;
+              float pupilR = 0.21 * uPupilScale;
+
+              float angle = atan(p.y, p.x);
+              float fibers = 0.88 + 0.12 * sin(angle * 24.0 + r * 18.0);
+              vec3 irisCol = uIrisColor * fibers * (1.15 - 0.65 * (r / irisR));
+              irisCol *= smoothstep(irisR, irisR - 0.06, r);
+
+              vec3 eyeCol = sclera;
+
+              if (frontMask > 0.5) {
+                float irisMask = 1.0 - smoothstep(irisR - 0.025, irisR + 0.01, r);
+                float pupilMask = 1.0 - smoothstep(pupilR - 0.02, pupilR + 0.01, r);
+
+                if (uSpiralAmount > 0.01) {
+                  float spiral = sin(r * 42.0 - angle * 3.0 - uTime * 11.0);
+                  vec3 spiralCol = mix(vec3(0.08, 0.04, 0.12), vec3(0.98, 0.96, 1.0), smoothstep(-0.2, 0.2, spiral));
+                  float spMask = 1.0 - smoothstep(0.48, 0.52, r);
+                  eyeCol = mix(eyeCol, spiralCol, spMask * uSpiralAmount);
+                } else if (uGiggleCrescent > 0.01) {
+                  vec2 cp = vLocalNormal.xy - vec2(0.0, -0.06);
+                  float arcDist = abs(length(cp) - 0.32);
+                  float upperHalf = smoothstep(-0.02, 0.08, vLocalNormal.y);
+                  float crescentMask = (1.0 - smoothstep(0.045, 0.075, arcDist)) * upperHalf;
+                  vec3 normalEye = mix(eyeCol, irisCol, irisMask);
+                  normalEye = mix(normalEye, vec3(0.04, 0.02, 0.07), pupilMask);
+                  vec3 happyEye = mix(sclera, vec3(0.08, 0.03, 0.11), crescentMask);
+                  eyeCol = mix(normalEye, happyEye, uGiggleCrescent);
+                } else {
+                  eyeCol = mix(eyeCol, irisCol, irisMask);
+                  eyeCol = mix(eyeCol, vec3(0.04, 0.02, 0.06), pupilMask);
+                }
+              }
+
+              vec3 viewDir = normalize(cameraPosition - vWorldPos);
+              vec3 lightDir1 = normalize(vec3(-0.35, 0.72, 0.85));
+              vec3 halfVec1 = normalize(viewDir + lightDir1);
+              float spec1 = pow(max(0.0, dot(vWorldNormal, halfVec1)), 96.0);
+              vec3 lightDir2 = normalize(vec3(0.55, 0.28, 0.65));
+              vec3 halfVec2 = normalize(viewDir + lightDir2);
+              float spec2 = pow(max(0.0, dot(vWorldNormal, halfVec2)), 48.0) * 0.45;
+
+              eyeCol += vec3(1.0, 0.98, 1.0) * (spec1 * 0.95 + spec2);
+              gl_FragColor = vec4(eyeCol, 1.0);
+            }
+          `
+        });
+
+        const eyeballMesh = new THREE.Mesh(eyeballGeo, eyeballMat);
+        root.add(eyeballMesh);
+
+        const lidGeo = new THREE.SphereGeometry(eyeRadius * 1.08, 32, 32);
+        const lidUniforms = {
+          uLidColor: { value: FLAVOURS.raspberry.tintColor.clone() },
+          uUpperNormal: { value: new THREE.Vector3(0, -0.85, 0.52) },
+          uLowerNormal: { value: new THREE.Vector3(0, 0.85, 0.52) }
+        };
+
+        const lidMat = new THREE.ShaderMaterial({
+          uniforms: lidUniforms,
+          vertexShader: `
+            varying vec3 vLocalPos;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPos;
+            void main() {
+              vLocalPos = position;
+              vec4 wp = modelMatrix * vec4(position, 1.0);
+              vWorldPos = wp.xyz;
+              vWorldNormal = normalize(mat3(modelMatrix) * normal);
+              gl_Position = projectionMatrix * viewMatrix * wp;
+            }
+          `,
+          fragmentShader: `
+            varying vec3 vLocalPos;
+            varying vec3 vWorldNormal;
+            varying vec3 vWorldPos;
+            uniform vec3 uLidColor;
+            uniform vec3 uUpperNormal;
+            uniform vec3 uLowerNormal;
+
+            void main() {
+              vec3 nPos = normalize(vLocalPos);
+              float dUpper = dot(nPos, uUpperNormal);
+              float dLower = dot(nPos, uLowerNormal);
+              float lidKeep = max(step(0.0, dUpper), step(0.0, dLower));
+              if (nPos.z > 0.0 && lidKeep < 0.5) discard;
+
+              float edgeDist = min(abs(dUpper), abs(dLower));
+              float marginDark = smoothstep(0.0, 0.09, edgeDist);
+
+              vec3 viewDir = normalize(cameraPosition - vWorldPos);
+              float fresnel = pow(1.0 - max(0.0, dot(vWorldNormal, viewDir)), 2.5);
+              float diff = 0.48 + 0.52 * max(0.0, vWorldNormal.y * 0.65 + vWorldNormal.z * 0.35);
+
+              vec3 col = uLidColor * diff * (0.62 + 0.38 * marginDark);
+              col += vec3(1.0, 0.85, 0.92) * fresnel * 0.28;
+              gl_FragColor = vec4(col, 1.0);
+            }
+          `,
+          side: THREE.DoubleSide
+        });
+
+        const lidMesh = new THREE.Mesh(lidGeo, lidMat);
+        root.add(lidMesh);
+
+        return { root, eyeUniforms, lidUniforms };
+      }
+
+      const leftEye = createEyeUnit();
+      const rightEye = createEyeUnit();
+      mainScene.add(leftEye.root);
+      mainScene.add(rightEye.root);
+
+      const mouthGroup = new THREE.Group();
+      const mouthPlaneGeo = new THREE.PlaneGeometry(0.13, 0.095, 16, 12);
+      const mouthUniforms = {
+        uMouthOpen: { value: 0.25 },
+        uMouthSmile: { value: -0.15 },
+        uMouthWidth: { value: 0.65 }
+      };
+      const mouthMat = new THREE.ShaderMaterial({
+        uniforms: mouthUniforms,
+        transparent: true,
+        depthWrite: false,
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv * 2.0 - 1.0;
+            vec3 p = position;
+            p.z += (1.0 - vUv.x * vUv.x) * 0.012;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          uniform float uMouthOpen;
+          uniform float uMouthSmile;
+          uniform float uMouthWidth;
+
+          void main() {
+            vec2 p = vUv;
+            p.x /= max(0.35, uMouthWidth);
+            p.y -= uMouthSmile * (p.x * p.x - 0.35);
+            float rx = p.x;
+            float ry = p.y / max(0.18, uMouthOpen);
+            float d = length(vec2(rx, ry));
+            if (d > 1.0) discard;
+
+            float alpha = smoothstep(1.0, 0.82, d);
+            vec3 cavity = vec3(0.12, 0.02, 0.06);
+            if (p.y > 0.08 * uMouthOpen && abs(p.x) < 0.42) {
+              float toothSplit = smoothstep(0.02, 0.06, abs(p.x));
+              cavity = mix(cavity, vec3(0.98, 0.96, 0.99), toothSplit);
+            } else if (p.y < -0.12 * uMouthOpen && length(vec2(p.x * 0.9, p.y + 0.35 * uMouthOpen)) < 0.48) {
+              cavity = vec3(0.86, 0.32, 0.48);
+            }
+            gl_FragColor = vec4(cavity, alpha * 0.94);
+          }
+        `
+      });
+      const mouthMesh = new THREE.Mesh(mouthPlaneGeo, mouthMat);
+      mouthGroup.add(mouthMesh);
+      mainScene.add(mouthGroup);
+
+      // =========================================================================
+      // INTERNAL BUBBLES & ~30 NERVE THREADS WITH RACING SPARKS
+      // =========================================================================
+      const bubbleGeo = new THREE.BufferGeometry();
+      const bubblePosArray = new Float32Array(NUM_BUBBLES * 3);
+      const bubblePosAttr = new THREE.BufferAttribute(bubblePosArray, 3);
+      bubblePosAttr.setUsage(THREE.DynamicDrawUsage);
+      bubbleGeo.setAttribute('position', bubblePosAttr);
+      bubbleGeo.setAttribute('aScale', new THREE.BufferAttribute(bubbleScales, 1));
+
+      const bubbleMat = new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        vertexShader: `
+          attribute float aScale;
+          void main() {
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = clamp(aScale * 1550.0 / -mv.z, 2.0, 22.0);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          void main() {
+            vec2 uv = gl_PointCoord * 2.0 - 1.0;
+            float r = length(uv);
+            if (r > 1.0) discard;
+            float rim = smoothstep(0.35, 0.92, r) * (1.0 - smoothstep(0.92, 1.0, r));
+            float spec = exp(-length(uv - vec2(-0.32, -0.35)) * 5.5);
+            float alpha = rim * 0.36 + spec * 0.55;
+            gl_FragColor = vec4(vec3(0.95, 0.92, 1.0), alpha);
+          }
+        `
+      });
+      const bubblePoints = new THREE.Points(bubbleGeo, bubbleMat);
+      mainScene.add(bubblePoints);
+
+      const threadDeformedPos = new Float32Array(totalThreadPts * 3);
+      const threadLineSegments = NUM_THREADS * (PTS_PER_THREAD - 1) * 2;
+      const threadLineArray = new Float32Array(threadLineSegments * 3);
+      const threadLineGeo = new THREE.BufferGeometry();
+      const threadLineAttr = new THREE.BufferAttribute(threadLineArray, 3);
+      threadLineAttr.setUsage(THREE.DynamicDrawUsage);
+      threadLineGeo.setAttribute('position', threadLineAttr);
+
+      const threadLineMat = new THREE.LineBasicMaterial({
+        color: 0xffd2ec,
+        transparent: true,
+        opacity: 0.14,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const threadLines = new THREE.LineSegments(threadLineGeo, threadLineMat);
+      mainScene.add(threadLines);
+
+      const MAX_PULSES = 64;
+      const pulses = [];
+      for (let i = 0; i < MAX_PULSES; i++) {
+        pulses.push({
+          active: false,
+          threadIdx: i % NUM_THREADS,
+          t: 0,
+          speed: 1.5,
+          intensity: 1.0
+        });
+      }
+
+      const sparkPosArray = new Float32Array(MAX_PULSES * 3);
+      const sparkIntArray = new Float32Array(MAX_PULSES);
+      const sparkGeo = new THREE.BufferGeometry();
+      const sparkPosAttr = new THREE.BufferAttribute(sparkPosArray, 3);
+      sparkPosAttr.setUsage(THREE.DynamicDrawUsage);
+      const sparkIntAttr = new THREE.BufferAttribute(sparkIntArray, 1);
+      sparkIntAttr.setUsage(THREE.DynamicDrawUsage);
+      sparkGeo.setAttribute('position', sparkPosAttr);
+      sparkGeo.setAttribute('aIntensity', sparkIntAttr);
+
+      const sparkMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uSparkColor: { value: new THREE.Color(1.0, 0.86, 0.55) }
+        },
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        vertexShader: `
+          attribute float aIntensity;
+          varying float vIntensity;
+          void main() {
+            vIntensity = aIntensity;
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = aIntensity > 0.01 ? clamp((26.0 + aIntensity * 24.0) / -mv.z, 3.0, 48.0) : 0.0;
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying float vIntensity;
+          uniform vec3 uSparkColor;
+          void main() {
+            if (vIntensity <= 0.01) discard;
+            vec2 uv = gl_PointCoord * 2.0 - 1.0;
+            float r2 = dot(uv, uv);
+            if (r2 > 1.0) discard;
+            float glow = exp(-r2 * 3.8) * vIntensity;
+            vec3 col = mix(uSparkColor, vec3(1.0, 0.98, 0.95), exp(-r2 * 9.0));
+            gl_FragColor = vec4(col * glow * 1.65, glow);
+          }
+        `
+      });
+      const sparkPoints = new THREE.Points(sparkGeo, sparkMat);
+      mainScene.add(sparkPoints);
+
+      const shaderSparkPositions = [];
+      for (let i = 0; i < 8; i++) shaderSparkPositions.push(new THREE.Vector4(0, 0.3, 0, 0));
+
+      // =========================================================================
+      // PASS 4 SCENE: Back-face depth for view-ray thickness
+      // =========================================================================
+      const backfaceScene = new THREE.Scene();
+      const backfaceMat = new THREE.ShaderMaterial({
+        vertexShader: `
+          varying float vViewZ;
+          void main() {
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            vViewZ = -mv.z;
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying float vViewZ;
+          void main() {
+            gl_FragColor = vec4(vViewZ, 0.0, 0.0, 1.0);
+          }
+        `,
+        side: THREE.BackSide
+      });
+      const backfaceBrainMesh = new THREE.Mesh(brainGeometry, backfaceMat);
+      backfaceScene.add(backfaceBrainMesh);
+
+      // =========================================================================
+      // PASS 5 SCENE: Gelatin pass (Refraction, Beer-Lambert, Wisps, Rim, Softboxes)
+      // =========================================================================
+      const gelatinScene = new THREE.Scene();
+
+      const gelatinUniforms = {
+        uSceneTex: { value: sceneRT.texture },
+        uBackDepthTex: { value: backDepthRT.texture },
+        uResolution: { value: new THREE.Vector2(rtWidth, rtHeight) },
+        uAbsorbColor: { value: FLAVOURS.raspberry.absorbColor.clone() },
+        uScatterColor: { value: FLAVOURS.raspberry.scatterColor.clone() },
+        uRimColor: { value: FLAVOURS.raspberry.rimColor.clone() },
+        uSparkColor: { value: new THREE.Vector3(1.0, 0.86, 0.55) },
+        uOpacityMul: { value: 1.0 },
+        uSparks: { value: shaderSparkPositions },
+        uCandleFlamePos: { value: new THREE.Vector3(candlePos.x, 0.23, candlePos.z) },
+        uCandleFlicker: { value: 1.0 },
+        uZapAmount: { value: 0.0 },
+        uTime: { value: 0.0 }
+      };
+
+      const gelatinMat = new THREE.ShaderMaterial({
+        uniforms: gelatinUniforms,
+        vertexShader: `
+          attribute vec3 aRestPos;
+          attribute float aSulcus;
+          varying vec3 vWorldPos;
+          varying vec3 vWorldNormal;
+          varying vec3 vViewNormal;
+          varying vec3 vRestPos;
+          varying float vSulcus;
+          varying float vFrontViewZ;
+
+          void main() {
+            vRestPos = aRestPos;
+            vSulcus = aSulcus;
+            vec4 wp = modelMatrix * vec4(position, 1.0);
+            vWorldPos = wp.xyz;
+            vWorldNormal = normalize(mat3(modelMatrix) * normal);
+            vec4 mv = viewMatrix * wp;
+            vFrontViewZ = -mv.z;
+            vViewNormal = normalize(normalMatrix * normal);
+            gl_Position = projectionMatrix * mv;
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vWorldPos;
+          varying vec3 vWorldNormal;
+          varying vec3 vViewNormal;
+          varying vec3 vRestPos;
+          varying float vSulcus;
+          varying float vFrontViewZ;
+
+          uniform sampler2D uSceneTex;
+          uniform sampler2D uBackDepthTex;
+          uniform vec2 uResolution;
+          uniform vec3 uAbsorbColor;
+          uniform vec3 uScatterColor;
+          uniform vec3 uRimColor;
+          uniform vec3 uSparkColor;
+          uniform float uOpacityMul;
+          uniform vec4 uSparks[8];
+          uniform vec3 uCandleFlamePos;
+          uniform float uCandleFlicker;
+          uniform float uZapAmount;
+          uniform float uTime;
+
+          float hash31(vec3 p) {
+            p = fract(p * 0.1031);
+            p += dot(p, p.yzx + 33.33);
+            return fract((p.x + p.y) * p.z);
+          }
+
+          float noise3(vec3 x) {
+            vec3 i = floor(x);
+            vec3 f = fract(x);
+            f = f * f * (3.0 - 2.0 * f);
+            return mix(
+              mix(mix(hash31(i + vec3(0,0,0)), hash31(i + vec3(1,0,0)), f.x),
+                  mix(hash31(i + vec3(0,1,0)), hash31(i + vec3(1,1,0)), f.x), f.y),
+              mix(mix(hash31(i + vec3(0,0,1)), hash31(i + vec3(1,0,1)), f.x),
+                  mix(hash31(i + vec3(0,1,1)), hash31(i + vec3(1,1,1)), f.x), f.y),
+              f.z
+            );
+          }
+
+          float fbmWisps(vec3 p) {
+            float v = 0.0;
+            float a = 0.5;
+            for (int i = 0; i < 3; i++) {
+              v += a * noise3(p);
+              p = p * 2.12 + vec3(1.7, -2.3, 0.9);
+              a *= 0.5;
+            }
+            return v;
+          }
+
+          float softboxHighlight(vec3 R, vec3 boxDir, vec3 upRef, vec2 halfSize) {
+            vec3 fwd = normalize(boxDir);
+            vec3 right = normalize(cross(upRef, fwd));
+            vec3 up = cross(fwd, right);
+            float d = dot(R, fwd);
+            if (d <= 0.0) return 0.0;
+            vec2 uv = vec2(dot(R, right), dot(R, up)) / (d * halfSize);
+            vec2 edge = smoothstep(vec2(1.25), vec2(0.45), abs(uv));
+            return edge.x * edge.y;
+          }
+
+          void main() {
+            vec2 screenUV = gl_FragCoord.xy / uResolution;
+            vec3 N = normalize(vWorldNormal);
+            vec3 V = normalize(cameraPosition - vWorldPos);
+            vec3 R = reflect(-V, N);
+
+            float backZ = texture2D(uBackDepthTex, screenUV).r;
+            float rawThickness = max(0.04, backZ - vFrontViewZ);
+            float foldFactor = 1.0 + vSulcus * 1.45;
+            float optThickness = clamp(rawThickness * 0.72 * foldFactor, 0.04, 0.85) * uOpacityMul;
+
+            vec2 refractOffset = vViewNormal.xy * (0.042 + 0.065 * rawThickness);
+            vec3 refractedBg = vec3(0.0);
+            vec2 blurStep = refractOffset * 0.14;
+            for (int i = -1; i <= 1; i++) {
+              vec2 off = refractOffset + float(i) * blurStep;
+              float rCh = texture2D(uSceneTex, clamp(screenUV + off * 1.04, 0.002, 0.998)).r;
+              float gCh = texture2D(uSceneTex, clamp(screenUV + off * 1.00, 0.002, 0.998)).g;
+              float bCh = texture2D(uSceneTex, clamp(screenUV + off * 0.96, 0.002, 0.998)).b;
+              refractedBg += vec3(rCh, gCh, bCh);
+            }
+            refractedBg /= 3.0;
+
+            vec3 transmittance = exp(-uAbsorbColor * optThickness);
+
+            float wisp = fbmWisps(vRestPos * 9.5 + V * 0.25);
+            float wispCloud = smoothstep(0.32, 0.74, wisp);
+
+            vec3 keyDir = normalize(vec3(-0.32, 0.88, 0.34));
+            float wrapDiff = max(0.0, (dot(N, keyDir) + 0.55) / 1.55);
+            float backSSS = pow(max(0.0, dot(V, -keyDir + N * 0.45)), 2.2) * 0.55;
+
+            float sulcusCrease = mix(1.0, 0.42, smoothstep(0.15, 0.95, vSulcus));
+            vec3 bodyScatter = uScatterColor * (0.32 + 0.68 * wrapDiff + backSSS) * sulcusCrease;
+            bodyScatter += mix(uScatterColor, uRimColor, 0.55) * wispCloud * 0.22 * sulcusCrease;
+
+            vec3 sparkGlow = vec3(0.0);
+            for (int s = 0; s < 8; s++) {
+              vec4 sp = uSparks[s];
+              if (sp.w > 0.001) {
+                float dSp = length(vWorldPos - sp.xyz);
+                float att = exp(-dSp * dSp * 26.0) * sp.w;
+                sparkGlow += uSparkColor * att * 0.72;
+              }
+            }
+
+            vec3 toCandle = uCandleFlamePos - vWorldPos;
+            float candleDist = length(toCandle);
+            vec3 candleDir = toCandle / max(0.001, candleDist);
+            float candleDiff = max(0.0, (dot(N, candleDir) + 0.35) / 1.35);
+            float candleTrans = pow(max(0.0, dot(V, -candleDir + N * 0.35)), 2.5);
+            float candleAtt = exp(-candleDist * 1.85) * uCandleFlicker;
+            vec3 candleLight = vec3(1.0, 0.52, 0.18) * (candleDiff * 0.45 + candleTrans * 0.55) * candleAtt;
+
+            float sulcusSpecMask = mix(1.0, 0.14, smoothstep(0.12, 0.85, vSulcus));
+            float sbMain = softboxHighlight(R, vec3(-0.38, 0.82, 0.42), vec3(0.0, 0.0, 1.0), vec2(0.42, 0.28));
+            float sbFill = softboxHighlight(R, vec3(0.55, 0.62, 0.48), vec3(0.0, 1.0, 0.0), vec2(0.28, 0.20)) * 0.55;
+            float sbRim  = softboxHighlight(R, vec3(0.0, 0.58, -0.78), vec3(1.0, 0.0, 0.0), vec2(0.55, 0.22)) * 0.45;
+            float glossPhong = pow(max(0.0, dot(R, keyDir)), 72.0) * 0.55;
+            float candleSpec = pow(max(0.0, dot(R, candleDir)), 48.0) * candleAtt * 0.65;
+
+            vec3 specular = (vec3(1.0, 0.97, 0.99) * (sbMain * 0.92 + sbFill + sbRim + glossPhong)
+                           + vec3(1.0, 0.65, 0.32) * candleSpec) * sulcusSpecMask;
+
+            float NdotV = max(0.0, dot(N, V));
+            float fresnel = pow(1.0 - NdotV, 3.2);
+            vec3 rim = uRimColor * fresnel * (0.48 + 0.32 * wrapDiff) * (1.0 - 0.45 * vSulcus);
+
+            vec3 zapFlash = vec3(0.55, 0.92, 1.0) * uZapAmount * (0.35 + 0.65 * sin(vRestPos.x * 45.0 + uTime * 50.0));
+
+            vec3 inScatter = (bodyScatter + candleLight + sparkGlow + zapFlash) * (1.0 - transmittance * 0.72);
+            vec3 finalColor = refractedBg * transmittance + inScatter + rim + specular;
+
+            gl_FragColor = vec4(finalColor, 1.0);
+          }
+        `,
+        side: THREE.FrontSide
+      });
+
+      const gelatinBrainMesh = new THREE.Mesh(brainGeometry, gelatinMat);
+      gelatinScene.add(gelatinBrainMesh);
+
+      const wireframeMat = new THREE.MeshBasicMaterial({
+        color: 0xf8c8dc,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.22,
+        depthTest: true
+      });
+      const wireframeBrainMesh = new THREE.Mesh(brainGeometry, wireframeMat);
+      wireframeBrainMesh.visible = false;
+      gelatinScene.add(wireframeBrainMesh);
+
+      const starsGroup = new THREE.Group();
+      starsGroup.visible = false;
+      gelatinScene.add(starsGroup);
+
+      function createFivePointStarGeometry(outerR, innerR, thickness) {
+        const shape = new THREE.Shape();
+        for (let i = 0; i < 10; i++) {
+          const r = (i % 2 === 0) ? outerR : innerR;
+          const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+          const x = Math.cos(a) * r;
+          const y = Math.sin(a) * r;
+          if (i === 0) shape.moveTo(x, y);
+          else shape.lineTo(x, y);
+        }
+        shape.closePath();
+        const geo = new THREE.ExtrudeGeometry(shape, {
+          depth: thickness,
+          bevelEnabled: true,
+          bevelThickness: thickness * 0.35,
+          bevelSize: thickness * 0.3,
+          bevelSegments: 2
+        });
+        geo.center();
+        return geo;
+      }
+
+      const starGeo = createFivePointStarGeometry(0.036, 0.016, 0.008);
+      const starMat = new THREE.MeshBasicMaterial({ color: 0xffe268 });
+      const starMeshes = [];
+      for (let i = 0; i < 4; i++) {
+        const sm = new THREE.Mesh(starGeo, starMat);
+        starsGroup.add(sm);
+        starMeshes.push(sm);
+      }
+
+      function createZTexture() {
+        const c = document.createElement('canvas');
+        c.width = 128; c.height = 128;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, 128, 128);
+        ctx.font = 'italic 84px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#f6c2d8';
+        ctx.shadowColor = 'rgba(246, 194, 216, 0.65)';
+        ctx.shadowBlur = 12;
+        ctx.fillText('Z', 64, 66);
+        const tex = new THREE.CanvasTexture(c);
+        return tex;
+      }
+
+      const zTex = createZTexture();
+      const sleepZs = [];
+      for (let i = 0; i < 3; i++) {
+        const spMat = new THREE.SpriteMaterial({
+          map: zTex,
+          transparent: true,
+          opacity: 0.0,
+          depthWrite: false
+        });
+        const sp = new THREE.Sprite(spMat);
+        sp.visible = false;
+        gelatinScene.add(sp);
+        sleepZs.push({ sprite: sp, mat: spMat, phase: i / 3 });
+      }
+
+      // =========================================================================
+      // PASS 6 SCENE: Khronos PBR Neutral Tone Mapping Post-Processing
+      // =========================================================================
+      const postScene = new THREE.Scene();
+      const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      const postMat = new THREE.ShaderMaterial({
+        uniforms: {
+          uCompositeTex: { value: compositeRT.texture }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          uniform sampler2D uCompositeTex;
+
+          vec3 KhronosPBRNeutralToneMapping(vec3 color) {
+            const float startCompression = 0.8 - 0.04;
+            const float desaturation = 0.15;
+
+            float x = min(color.r, min(color.g, color.b));
+            float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+            color -= offset;
+
+            float peak = max(color.r, max(color.g, color.b));
+            if (peak < startCompression) return color;
+
+            const float d = 1.0 - startCompression;
+            float newPeak = 1.0 - d * d / (peak + d - startCompression);
+            color *= newPeak / peak;
+
+            float g = 1.0 - 1.0 / (desaturation * (peak - newPeak) + 1.0);
+            return mix(color, vec3(newPeak), g);
+          }
+
+          void main() {
+            vec3 hdr = texture2D(uCompositeTex, vUv).rgb;
+            vec3 mapped = KhronosPBRNeutralToneMapping(max(vec3(0.0), hdr));
+            vec3 srgb = pow(mapped, vec3(1.0 / 2.2));
+            gl_FragColor = vec4(srgb, 1.0);
+          }
+        `,
+        depthTest: false,
+        depthWrite: false
+      });
+      const postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), postMat);
+      postScene.add(postQuad);
+
+      // =========================================================================
+      // 8. POLAR DECOMPOSITION & XPBD CO-ROTATIONAL PHYSICS ENGINE
+      // =========================================================================
+      function extractRotationQuat(F, qOut, qOffset) {
+        let qx = qOut[qOffset], qy = qOut[qOffset + 1], qz = qOut[qOffset + 2], qw = qOut[qOffset + 3];
+
+        for (let iter = 0; iter < 3; iter++) {
+          const x2 = qx + qx, y2 = qy + qy, z2 = qz + qz;
+          const xx = qx * x2, xy = qx * y2, xz = qx * z2;
+          const yy = qy * y2, yz = qy * z2, zz = qz * z2;
+          const wx = qw * x2, wy = qw * y2, wz = qw * z2;
+
+          const r00 = 1.0 - (yy + zz), r10 = xy + wz, r20 = xz - wy;
+          const r01 = xy - wz, r11 = 1.0 - (xx + zz), r21 = yz + wx;
+          const r02 = xz + wy, r12 = yz - wx, r22 = 1.0 - (xx + yy);
+
+          const f00 = F[0], f10 = F[1], f20 = F[2];
+          const f01 = F[3], f11 = F[4], f21 = F[5];
+          const f02 = F[6], f12 = F[7], f22 = F[8];
+
+          const ox = (r10 * f20 - r20 * f10) + (r11 * f21 - r21 * f11) + (r12 * f22 - r22 * f12);
+          const oy = (r20 * f00 - r00 * f20) + (r21 * f01 - r01 * f21) + (r22 * f02 - r02 * f22);
+          const oz = (r00 * f10 - r10 * f00) + (r01 * f11 - r11 * f01) + (r02 * f12 - r12 * f02);
+
+          const dotSum = (r00 * f00 + r10 * f10 + r20 * f20)
+                       + (r01 * f01 + r11 * f11 + r21 * f21)
+                       + (r02 * f02 + r12 * f12 + r22 * f22);
+          const denom = Math.abs(dotSum) + 1e-6;
+          const wxStep = ox / denom;
+          const wyStep = oy / denom;
+          const wzStep = oz / denom;
+          const wLen = Math.hypot(wxStep, wyStep, wzStep);
+          if (wLen < 1e-6) break;
+
+          const halfW = 0.5 * wLen;
+          const s = Math.sin(halfW) / wLen;
+          const c = Math.cos(halfW);
+          const dqx = wxStep * s, dqy = wyStep * s, dqz = wzStep * s, dqw = c;
+
+          const nqx = dqw * qx + dqx * qw + dqy * qz - dqz * qy;
+          const nqy = dqw * qy - dqx * qz + dqy * qw + dqz * qx;
+          const nqz = dqw * qz + dqx * qy - dqy * qx + dqz * qw;
+          const nqw = dqw * qw - dqx * qx - dqy * qy - dqz * qz;
+          const qNorm = Math.hypot(nqx, nqy, nqz, nqw) || 1.0;
+          qx = nqx / qNorm; qy = nqy / qNorm; qz = nqz / qNorm; qw = nqw / qNorm;
+        }
+
+        qOut[qOffset] = qx;
+        qOut[qOffset + 1] = qy;
+        qOut[qOffset + 2] = qz;
+        qOut[qOffset + 3] = qw;
+      }
+
+      const grabPatch = {
+        active: false,
+        indices: [],
+        weights: [],
+        localOffsets: [],
+        anchorWorld: new THREE.Vector3(),
+        targetWorld: new THREE.Vector3(),
+        twistAngle: 0,
+        targetTwistAngle: 0,
+        dragPlaneDist: 2.5,
+        velocityHistory: [],
+        strokeDistance: 0,
+        lastPointerPos: new THREE.Vector2()
+      };
+
+      const Fmat = new Float32Array(9);
+      const brainCenterOfMass = new THREE.Vector3(0, 0.30, 0);
+      const brainUpVector = new THREE.Vector3(0, 1, 0);
+      let maxVerticalVelocity = 0;
+
+      function stepPhysics() {
+        const substeps = 8;
+        const timeScale = state.slowMo ? 0.25 : 1.0;
+        const frameDt = (1.0 / 60.0) * timeScale;
+        const dt = frameDt / substeps;
+
+        const isAsleep = (state.mood === 'Asleep' || state.mood === 'Drowsy');
+        const breathFreq = isAsleep ? 1.45 : 2.65;
+        const breathAmp = isAsleep ? 0.030 : 0.012;
+        state.breathPhase += frameDt * breathFreq;
+        const breathY = 1.0 + breathAmp * Math.sin(state.breathPhase);
+        const breathXZ = 1.0 / Math.sqrt(breathY);
+
+        const {
+          numParticles, numTets, pos, prevPos, restPos, vel, invMass,
+          tets, restVolumes, invDm, tetQuats, edges
+        } = lattice;
+
+        const shapeStiff = 0.08 + Math.pow(state.firmness, 1.55) * 0.48;
+        const edgeStiff = 0.14 + Math.pow(state.firmness, 1.35) * 0.56;
+        const dampFactor = state.damping;
+
+        grabPatch.twistAngle += (grabPatch.targetTwistAngle - grabPatch.twistAngle) * 0.22;
+
+        for (let step = 0; step < substeps; step++) {
+          for (let i = 0; i < numParticles; i++) {
+            const i3 = i * 3;
+            prevPos[i3] = pos[i3];
+            prevPos[i3 + 1] = pos[i3 + 1];
+            prevPos[i3 + 2] = pos[i3 + 2];
+
+            vel[i3 + 1] -= 9.81 * dt;
+
+            if (state.zapTimer > 0) {
+              vel[i3] += (Math.random() - 0.5) * 14.0 * dt;
+              vel[i3 + 1] += (Math.random() - 0.45) * 14.0 * dt;
+              vel[i3 + 2] += (Math.random() - 0.5) * 14.0 * dt;
+            }
+
+            if (state.tickleTimer > 0) {
+              vel[i3] += Math.sin(state.simTime * 42.0 + i) * 1.8 * dt;
+              vel[i3 + 1] += Math.cos(state.simTime * 38.0 + i) * 1.4 * dt;
+            }
+
+            const airDamp = Math.max(0.0, 1.0 - (0.35 + dampFactor * 1.8) * dt);
+            vel[i3] *= airDamp;
+            vel[i3 + 1] *= airDamp;
+            vel[i3 + 2] *= airDamp;
+
+            pos[i3] += vel[i3] * dt;
+            pos[i3 + 1] += vel[i3 + 1] * dt;
+            pos[i3 + 2] += vel[i3 + 2] * dt;
+          }
+
+          if (grabPatch.active) {
+            const cosT = Math.cos(grabPatch.twistAngle);
+            const sinT = Math.sin(grabPatch.twistAngle);
+            for (let k = 0; k < grabPatch.indices.length; k++) {
+              const pIdx = grabPatch.indices[k] * 3;
+              const w = grabPatch.weights[k];
+              const off = grabPatch.localOffsets[k];
+
+              const rx = off.x * cosT - off.z * sinT;
+              const rz = off.x * sinT + off.z * cosT;
+
+              const tx = grabPatch.targetWorld.x + rx;
+              const ty = Math.max(0.02, grabPatch.targetWorld.y + off.y);
+              const tz = grabPatch.targetWorld.z + rz;
+
+              const pull = w * 0.48;
+              pos[pIdx] += (tx - pos[pIdx]) * pull;
+              pos[pIdx + 1] += (ty - pos[pIdx + 1]) * pull;
+              pos[pIdx + 2] += (tz - pos[pIdx + 2]) * pull;
+            }
+          }
+
+          const numEdges = edges.length / 2;
+          for (let e = 0; e < numEdges; e++) {
+            const i0 = edges[e * 2];
+            const i1 = edges[e * 2 + 1];
+            const a = i0 * 3, b = i1 * 3;
+
+            const dx = pos[b] - pos[a];
+            const dy = pos[b + 1] - pos[a + 1];
+            const dz = pos[b + 2] - pos[a + 2];
+            const len = Math.hypot(dx, dy, dz);
+            if (len < 1e-7) continue;
+
+            const rdx = (restPos[b] - restPos[a]) * breathXZ;
+            const rdy = (restPos[b + 1] - restPos[a + 1]) * breathY;
+            const rdz = (restPos[b + 2] - restPos[a + 2]) * breathXZ;
+            const restLen = Math.hypot(rdx, rdy, rdz);
+
+            const w0 = invMass[i0], w1 = invMass[i1];
+            const wSum = w0 + w1;
+            if (wSum < 1e-8) continue;
+
+            const corr = ((len - restLen) / len) * (edgeStiff / wSum);
+            pos[a] += dx * corr * w0;
+            pos[a + 1] += dy * corr * w0;
+            pos[a + 2] += dz * corr * w0;
+            pos[b] -= dx * corr * w1;
+            pos[b + 1] -= dy * corr * w1;
+            pos[b + 2] -= dz * corr * w1;
+          }
+
+          for (let t = 0; t < numTets; t++) {
+            const t4 = t * 4;
+            const i0 = tets[t4], i1 = tets[t4 + 1], i2 = tets[t4 + 2], i3 = tets[t4 + 3];
+            const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3, p3 = i3 * 3;
+
+            const x0 = pos[p0], y0 = pos[p0 + 1], z0 = pos[p0 + 2];
+            const d1x = pos[p1] - x0, d1y = pos[p1 + 1] - y0, d1z = pos[p1 + 2] - z0;
+            const d2x = pos[p2] - x0, d2y = pos[p2 + 1] - y0, d2z = pos[p2 + 2] - z0;
+            const d3x = pos[p3] - x0, d3y = pos[p3 + 1] - y0, d3z = pos[p3 + 2] - z0;
+
+            const g1x = (d2y * d3z - d2z * d3y) / 6.0;
+            const g1y = (d2z * d3x - d2x * d3z) / 6.0;
+            const g1z = (d2x * d3y - d2y * d3x) / 6.0;
+
+            const g2x = (d3y * d1z - d3z * d1y) / 6.0;
+            const g2y = (d3z * d1x - d3x * d1z) / 6.0;
+            const g2z = (d3x * d1y - d3y * d1x) / 6.0;
+
+            const g3x = (d1y * d2z - d1z * d2y) / 6.0;
+            const g3y = (d1z * d2x - d1x * d2z) / 6.0;
+            const g3z = (d1x * d2y - d1y * d2x) / 6.0;
+
+            const g0x = -(g1x + g2x + g3x);
+            const g0y = -(g1y + g2y + g3y);
+            const g0z = -(g1z + g2z + g3z);
+
+            const curVol = d1x * g1x + d1y * g1y + d1z * g1z;
+            const Cvol = curVol - restVolumes[t];
+
+            const w0 = invMass[i0], w1 = invMass[i1], w2 = invMass[i2], w3 = invMass[i3];
+            const gradSum = w0 * (g0x * g0x + g0y * g0y + g0z * g0z)
+                          + w1 * (g1x * g1x + g1y * g1y + g1z * g1z)
+                          + w2 * (g2x * g2x + g2y * g2y + g2z * g2z)
+                          + w3 * (g3x * g3x + g3y * g3y + g3z * g3z);
+
+            if (gradSum > 1e-11) {
+              const lambda = -Cvol / (gradSum + 1e-9);
+              pos[p0] += w0 * lambda * g0x; pos[p0 + 1] += w0 * lambda * g0y; pos[p0 + 2] += w0 * lambda * g0z;
+              pos[p1] += w1 * lambda * g1x; pos[p1 + 1] += w1 * lambda * g1y; pos[p1 + 2] += w1 * lambda * g1z;
+              pos[p2] += w2 * lambda * g2x; pos[p2 + 1] += w2 * lambda * g2y; pos[p2 + 2] += w2 * lambda * g2z;
+              pos[p3] += w3 * lambda * g3x; pos[p3 + 1] += w3 * lambda * g3y; pos[p3 + 2] += w3 * lambda * g3z;
+            }
+
+            const m = t * 9;
+            const im00 = invDm[m], im10 = invDm[m + 1], im20 = invDm[m + 2];
+            const im01 = invDm[m + 3], im11 = invDm[m + 4], im21 = invDm[m + 5];
+            const im02 = invDm[m + 6], im12 = invDm[m + 7], im22 = invDm[m + 8];
+
+            Fmat[0] = d1x * im00 + d2x * im10 + d3x * im20;
+            Fmat[1] = d1y * im00 + d2y * im10 + d3y * im20;
+            Fmat[2] = d1z * im00 + d2z * im10 + d3z * im20;
+
+            Fmat[3] = d1x * im01 + d2x * im11 + d3x * im21;
+            Fmat[4] = d1y * im01 + d2y * im11 + d3y * im21;
+            Fmat[5] = d1z * im01 + d2z * im11 + d3z * im21;
+
+            Fmat[6] = d1x * im02 + d2x * im12 + d3x * im22;
+            Fmat[7] = d1y * im02 + d2y * im12 + d3y * im22;
+            Fmat[8] = d1z * im02 + d2z * im12 + d3z * im22;
+
+            extractRotationQuat(Fmat, tetQuats, t4);
+
+            const qx = tetQuats[t4], qy = tetQuats[t4 + 1], qz = tetQuats[t4 + 2], qw = tetQuats[t4 + 3];
+            const x2 = qx + qx, y2 = qy + qy, z2 = qz + qz;
+            const xx = qx * x2, xy = qx * y2, xz = qx * z2;
+            const yy = qy * y2, yz = qy * z2, zz = qz * z2;
+            const wx = qw * x2, wy = qw * y2, wz = qw * z2;
+
+            const r00 = 1.0 - (yy + zz), r10 = xy + wz, r20 = xz - wy;
+            const r01 = xy - wz, r11 = 1.0 - (xx + zz), r21 = yz + wx;
+            const r02 = xz + wy, r12 = yz - wx, r22 = 1.0 - (xx + yy);
+
+            const cx = 0.25 * (pos[p0] + pos[p1] + pos[p2] + pos[p3]);
+            const cy = 0.25 * (pos[p0 + 1] + pos[p1 + 1] + pos[p2 + 1] + pos[p3 + 1]);
+            const cz = 0.25 * (pos[p0 + 2] + pos[p1 + 2] + pos[p2 + 2] + pos[p3 + 2]);
+
+            const rcx = 0.25 * (restPos[p0] + restPos[p1] + restPos[p2] + restPos[p3]) * breathXZ;
+            const rcy = 0.25 * (restPos[p0 + 1] + restPos[p1 + 1] + restPos[p2 + 1] + restPos[p3 + 1]) * breathY;
+            const rcz = 0.25 * (restPos[p0 + 2] + restPos[p1 + 2] + restPos[p2 + 2] + restPos[p3 + 2]) * breathXZ;
+
+            for (let k = 0; k < 4; k++) {
+              const pk = tets[t4 + k] * 3;
+              const rx = restPos[pk] * breathXZ - rcx;
+              const ry = restPos[pk + 1] * breathY - rcy;
+              const rz = restPos[pk + 2] * breathXZ - rcz;
+
+              const gx = cx + r00 * rx + r01 * ry + r02 * rz;
+              const gy = cy + r10 * rx + r11 * ry + r12 * rz;
+              const gz = cz + r20 * rx + r21 * ry + r22 * rz;
+
+              pos[pk] += (gx - pos[pk]) * shapeStiff;
+              pos[pk + 1] += (gy - pos[pk + 1]) * shapeStiff;
+              pos[pk + 2] += (gz - pos[pk + 2]) * shapeStiff;
+            }
+          }
+
+          const arenaRadius = 1.15;
+          const slideKeep = Math.max(0.0, 1.0 - (0.28 + dampFactor * 0.45));
+
+          for (let i = 0; i < numParticles; i++) {
+            const i3 = i * 3;
+            if (pos[i3 + 1] < 0.005) {
+              pos[i3 + 1] = 0.005;
+              const dx = pos[i3] - prevPos[i3];
+              const dz = pos[i3 + 2] - prevPos[i3 + 2];
+              pos[i3] = prevPos[i3] + dx * slideKeep;
+              pos[i3 + 2] = prevPos[i3 + 2] + dz * slideKeep;
+            }
+
+            const rHoriz = Math.hypot(pos[i3], pos[i3 + 2]);
+            if (rHoriz > arenaRadius) {
+              const pushBack = (rHoriz - arenaRadius) * 0.25;
+              pos[i3] -= (pos[i3] / rHoriz) * pushBack;
+              pos[i3 + 2] -= (pos[i3 + 2] / rHoriz) * pushBack;
+            }
+
+            if (pos[i3 + 1] < 0.25) {
+              const dcx = pos[i3] - candlePos.x;
+              const dcz = pos[i3 + 2] - candlePos.z;
+              const dCandle = Math.hypot(dcx, dcz);
+              const minCandleR = 0.088;
+              if (dCandle < minCandleR && dCandle > 1e-5) {
+                pos[i3] = candlePos.x + (dcx / dCandle) * minCandleR;
+                pos[i3 + 2] = candlePos.z + (dcz / dCandle) * minCandleR;
+              }
+            }
+
+            vel[i3] = (pos[i3] - prevPos[i3]) / dt;
+            vel[i3 + 1] = (pos[i3 + 1] - prevPos[i3 + 1]) / dt;
+            vel[i3 + 2] = (pos[i3 + 2] - prevPos[i3 + 2]) / dt;
+          }
+
+          const edgeDampCoeff = dampFactor * 0.16;
+          for (let e = 0; e < numEdges; e++) {
+            const a = edges[e * 2] * 3;
+            const b = edges[e * 2 + 1] * 3;
+            const dvx = (vel[b] - vel[a]) * edgeDampCoeff;
+            const dvy = (vel[b + 1] - vel[a + 1]) * edgeDampCoeff;
+            const dvz = (vel[b + 2] - vel[a + 2]) * edgeDampCoeff;
+            vel[a] += dvx; vel[a + 1] += dvy; vel[a + 2] += dvz;
+            vel[b] -= dvx; vel[b + 1] -= dvy; vel[b + 2] -= dvz;
+          }
+        }
+
+        let curTotalVol = 0;
+        let cmx = 0, cmy = 0, cmz = 0;
+        let avgVy = 0;
+        for (let i = 0; i < numParticles; i++) {
+          cmx += pos[i * 3];
+          cmy += pos[i * 3 + 1];
+          cmz += pos[i * 3 + 2];
+          avgVy += vel[i * 3 + 1];
+        }
+        brainCenterOfMass.set(cmx / numParticles, cmy / numParticles, cmz / numParticles);
+        avgVy /= numParticles;
+
+        if (avgVy < -1.65) {
+          maxVerticalVelocity = Math.min(maxVerticalVelocity, avgVy);
+        } else if (maxVerticalVelocity < -1.85 && brainCenterOfMass.y < 0.36 && Math.abs(avgVy) < 0.55) {
+          state.dizzyTimer = 4.2;
+          sound.playSquelch(Math.min(1.0, Math.abs(maxVerticalVelocity) * 0.35));
+          maxVerticalVelocity = 0;
+        }
+
+        const cofactors = lattice.particleCofactors;
+        cofactors.fill(0);
+
+        for (let t = 0; t < numTets; t++) {
+          const t4 = t * 4;
+          const i0 = tets[t4], i1 = tets[t4 + 1], i2 = tets[t4 + 2], i3 = tets[t4 + 3];
+          const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3, p3 = i3 * 3;
+
+          const d1x = pos[p1] - pos[p0], d1y = pos[p1 + 1] - pos[p0 + 1], d1z = pos[p1 + 2] - pos[p0 + 2];
+          const d2x = pos[p2] - pos[p0], d2y = pos[p2 + 1] - pos[p0 + 1], d2z = pos[p2 + 2] - pos[p0 + 2];
+          const d3x = pos[p3] - pos[p0], d3y = pos[p3 + 1] - pos[p0 + 1], d3z = pos[p3 + 2] - pos[p0 + 2];
+
+          const det6 = d1x * (d2y * d3z - d2z * d3y)
+                     - d1y * (d2x * d3z - d2z * d3x)
+                     + d1z * (d2x * d3y - d2y * d3x);
+          curTotalVol += det6 / 6.0;
+
+          const m = t * 9;
+          const im00 = invDm[m], im10 = invDm[m + 1], im20 = invDm[m + 2];
+          const im01 = invDm[m + 3], im11 = invDm[m + 4], im21 = invDm[m + 5];
+          const im02 = invDm[m + 6], im12 = invDm[m + 7], im22 = invDm[m + 8];
+
+          const f00 = d1x * im00 + d2x * im10 + d3x * im20;
+          const f10 = d1y * im00 + d2y * im10 + d3y * im20;
+          const f20 = d1z * im00 + d2z * im10 + d3z * im20;
+
+          const f01 = d1x * im01 + d2x * im11 + d3x * im21;
+          const f11 = d1y * im01 + d2y * im11 + d3y * im21;
+          const f21 = d1z * im01 + d2z * im11 + d3z * im21;
+
+          const f02 = d1x * im02 + d2x * im12 + d3x * im22;
+          const f12 = d1y * im02 + d2y * im12 + d3y * im22;
+          const f22 = d1z * im02 + d2z * im12 + d3z * im22;
+
+          const c00 = f11 * f22 - f21 * f12, c10 = f21 * f02 - f01 * f22, c20 = f01 * f12 - f11 * f02;
+          const c01 = f12 * f20 - f22 * f10, c11 = f22 * f00 - f02 * f20, c21 = f02 * f10 - f12 * f00;
+          const c02 = f10 * f21 - f20 * f11, c12 = f20 * f01 - f00 * f21, c22 = f00 * f11 - f10 * f01;
+
+          for (let k = 0; k < 4; k++) {
+            const cIdx = tets[t4 + k] * 9;
+            cofactors[cIdx] += c00; cofactors[cIdx + 1] += c10; cofactors[cIdx + 2] += c20;
+            cofactors[cIdx + 3] += c01; cofactors[cIdx + 4] += c11; cofactors[cIdx + 5] += c21;
+            cofactors[cIdx + 6] += c02; cofactors[cIdx + 7] += c12; cofactors[cIdx + 8] += c22;
+          }
+        }
+
+        state.volumePct = Math.max(94.0, Math.min(106.0, (curTotalVol / lattice.totalRestVolume) * 100.0));
+
+        const { embedTet, embedWeights } = skinBinding;
+        const { positions: sPos, normals: sNorm, restNormals: sRestNorm, numVerts } = skinData;
+
+        for (let v = 0; v < numVerts; v++) {
+          const t4 = embedTet[v] * 4;
+          const i0 = tets[t4], i1 = tets[t4 + 1], i2 = tets[t4 + 2], i3 = tets[t4 + 3];
+          const w4 = v * 4;
+          const w0 = embedWeights[w4], w1 = embedWeights[w4 + 1], w2 = embedWeights[w4 + 2], w3 = embedWeights[w4 + 3];
+
+          const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3, p3 = i3 * 3;
+          const v3 = v * 3;
+          sPos[v3]     = w0 * pos[p0]     + w1 * pos[p1]     + w2 * pos[p2]     + w3 * pos[p3];
+          sPos[v3 + 1] = w0 * pos[p0 + 1] + w1 * pos[p1 + 1] + w2 * pos[p2 + 1] + w3 * pos[p3 + 1];
+          sPos[v3 + 2] = w0 * pos[p0 + 2] + w1 * pos[p1 + 2] + w2 * pos[p2 + 2] + w3 * pos[p3 + 2];
+
+          const c0 = i0 * 9, c1 = i1 * 9, c2 = i2 * 9, c3 = i3 * 9;
+          const m00 = w0 * cofactors[c0]     + w1 * cofactors[c1]     + w2 * cofactors[c2]     + w3 * cofactors[c3];
+          const m10 = w0 * cofactors[c0 + 1] + w1 * cofactors[c1 + 1] + w2 * cofactors[c2 + 1] + w3 * cofactors[c3 + 1];
+          const m20 = w0 * cofactors[c0 + 2] + w1 * cofactors[c1 + 2] + w2 * cofactors[c2 + 2] + w3 * cofactors[c3 + 2];
+
+          const m01 = w0 * cofactors[c0 + 3] + w1 * cofactors[c1 + 3] + w2 * cofactors[c2 + 3] + w3 * cofactors[c3 + 3];
+          const m11 = w0 * cofactors[c0 + 4] + w1 * cofactors[c1 + 4] + w2 * cofactors[c2 + 4] + w3 * cofactors[c3 + 4];
+          const m21 = w0 * cofactors[c0 + 5] + w1 * cofactors[c1 + 5] + w2 * cofactors[c2 + 5] + w3 * cofactors[c3 + 5];
+
+          const m02 = w0 * cofactors[c0 + 6] + w1 * cofactors[c1 + 6] + w2 * cofactors[c2 + 6] + w3 * cofactors[c3 + 6];
+          const m12 = w0 * cofactors[c0 + 7] + w1 * cofactors[c1 + 7] + w2 * cofactors[c2 + 7] + w3 * cofactors[c3 + 7];
+          const m22 = w0 * cofactors[c0 + 8] + w1 * cofactors[c1 + 8] + w2 * cofactors[c2 + 8] + w3 * cofactors[c3 + 8];
+
+          const rnx = sRestNorm[v3], rny = sRestNorm[v3 + 1], rnz = sRestNorm[v3 + 2];
+          const nx = m00 * rnx + m01 * rny + m02 * rnz;
+          const ny = m10 * rnx + m11 * rny + m12 * rnz;
+          const nz = m20 * rnx + m21 * rny + m22 * rnz;
+          const nlen = Math.hypot(nx, ny, nz) || 1.0;
+
+          sNorm[v3] = nx / nlen;
+          sNorm[v3 + 1] = ny / nlen;
+          sNorm[v3 + 2] = nz / nlen;
+        }
+
+        posAttr.needsUpdate = true;
+        normAttr.needsUpdate = true;
+
+        for (let b = 0; b < NUM_BUBBLES; b++) {
+          const t4 = bubbleBinding.embedTet[b] * 4;
+          const i0 = tets[t4], i1 = tets[t4 + 1], i2 = tets[t4 + 2], i3 = tets[t4 + 3];
+          const w4 = b * 4;
+          const w0 = bubbleBinding.embedWeights[w4], w1 = bubbleBinding.embedWeights[w4 + 1],
+                w2 = bubbleBinding.embedWeights[w4 + 2], w3 = bubbleBinding.embedWeights[w4 + 3];
+          const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3, p3 = i3 * 3;
+          bubblePosArray[b * 3]     = w0 * pos[p0]     + w1 * pos[p1]     + w2 * pos[p2]     + w3 * pos[p3];
+          bubblePosArray[b * 3 + 1] = w0 * pos[p0 + 1] + w1 * pos[p1 + 1] + w2 * pos[p2 + 1] + w3 * pos[p3 + 1];
+          bubblePosArray[b * 3 + 2] = w0 * pos[p0 + 2] + w1 * pos[p1 + 2] + w2 * pos[p2 + 2] + w3 * pos[p3 + 2];
+        }
+        bubblePosAttr.needsUpdate = true;
+
+        for (let tp = 0; tp < totalThreadPts; tp++) {
+          const t4 = threadBinding.embedTet[tp] * 4;
+          const i0 = tets[t4], i1 = tets[t4 + 1], i2 = tets[t4 + 2], i3 = tets[t4 + 3];
+          const w4 = tp * 4;
+          const w0 = threadBinding.embedWeights[w4], w1 = threadBinding.embedWeights[w4 + 1],
+                w2 = threadBinding.embedWeights[w4 + 2], w3 = threadBinding.embedWeights[w4 + 3];
+          const p0 = i0 * 3, p1 = i1 * 3, p2 = i2 * 3, p3 = i3 * 3;
+          threadDeformedPos[tp * 3]     = w0 * pos[p0]     + w1 * pos[p1]     + w2 * pos[p2]     + w3 * pos[p3];
+          threadDeformedPos[tp * 3 + 1] = w0 * pos[p0 + 1] + w1 * pos[p1 + 1] + w2 * pos[p2 + 1] + w3 * pos[p3 + 1];
+          threadDeformedPos[tp * 3 + 2] = w0 * pos[p0 + 2] + w1 * pos[p1 + 2] + w2 * pos[p2 + 2] + w3 * pos[p3 + 2];
+        }
+
+        let segPtr = 0;
+        for (let th = 0; th < NUM_THREADS; th++) {
+          for (let s = 0; s < PTS_PER_THREAD - 1; s++) {
+            const a = (th * PTS_PER_THREAD + s) * 3;
+            const b = (th * PTS_PER_THREAD + s + 1) * 3;
+            threadLineArray[segPtr++] = threadDeformedPos[a];
+            threadLineArray[segPtr++] = threadDeformedPos[a + 1];
+            threadLineArray[segPtr++] = threadDeformedPos[a + 2];
+            threadLineArray[segPtr++] = threadDeformedPos[b];
+            threadLineArray[segPtr++] = threadDeformedPos[b + 1];
+            threadLineArray[segPtr++] = threadDeformedPos[b + 2];
+          }
+        }
+        threadLineAttr.needsUpdate = true;
+      }
+
+      // =========================================================================
+      // 9. RIGID EYE TRACKING, EXPRESSIVE LIDS, MOOD MACHINE & SPARK PULSES
+      // =========================================================================
+      const tmpQuat = new Float32Array([0, 0, 0, 1]);
+      const covMat = new Float32Array(9);
+
+      function updateClusterPose(cluster, restAnchor, outPos, outQuat) {
+        const { pos, restPos } = lattice;
+        let cx = 0, cy = 0, cz = 0;
+        let rcx = 0, rcy = 0, rcz = 0;
+        let wTotal = 0;
+
+        for (let k = 0; k < cluster.length; k++) {
+          const i3 = cluster[k].idx * 3;
+          const w = cluster[k].weight;
+          cx += pos[i3] * w; cy += pos[i3 + 1] * w; cz += pos[i3 + 2] * w;
+          rcx += restPos[i3] * w; rcy += restPos[i3 + 1] * w; rcz += restPos[i3 + 2] * w;
+          wTotal += w;
+        }
+        cx /= wTotal; cy /= wTotal; cz /= wTotal;
+        rcx /= wTotal; rcy /= wTotal; rcz /= wTotal;
+
+        covMat.fill(0);
+        for (let k = 0; k < cluster.length; k++) {
+          const i3 = cluster[k].idx * 3;
+          const w = cluster[k].weight;
+          const px = pos[i3] - cx, py = pos[i3 + 1] - cy, pz = pos[i3 + 2] - cz;
+          const qx = restPos[i3] - rcx, qy = restPos[i3 + 1] - rcy, qz = restPos[i3 + 2] - rcz;
+
+          covMat[0] += w * px * qx; covMat[1] += w * py * qx; covMat[2] += w * pz * qx;
+          covMat[3] += w * px * qy; covMat[4] += w * py * qy; covMat[5] += w * pz * qy;
+          covMat[6] += w * px * qz; covMat[7] += w * py * qz; covMat[8] += w * pz * qz;
+        }
+
+        tmpQuat[0] = outQuat.x; tmpQuat[1] = outQuat.y; tmpQuat[2] = outQuat.z; tmpQuat[3] = outQuat.w;
+        extractRotationQuat(covMat, tmpQuat, 0);
+        outQuat.set(tmpQuat[0], tmpQuat[1], tmpQuat[2], tmpQuat[3]);
+
+        const offset = restAnchor.clone().sub(new THREE.Vector3(rcx, rcy, rcz)).applyQuaternion(outQuat);
+        outPos.set(cx + offset.x, cy + offset.y, cz + offset.z);
+      }
+
+      const leftRestAnchor = new THREE.Vector3(-0.175, 0.275, 0.415);
+      const rightRestAnchor = new THREE.Vector3(0.175, 0.275, 0.415);
+      const leftEyeQuat = new THREE.Quaternion();
+      const rightEyeQuat = new THREE.Quaternion();
+
+      const pointerNDC = new THREE.Vector2(0, 0);
+      let pointerActive = false;
+      const gazeWorldTarget = new THREE.Vector3(0, 0.32, 2.2);
+      const saccadeOffset = new THREE.Vector2(0, 0);
+      let nextSaccadeTime = 1.5;
+      let nextBlinkTime = 2.8;
+      let blinkTimer = 0;
+
+      const expr = {
+        upperAngleL: 0.56,
+        lowerAngleL: 0.52,
+        browTiltL: -0.06,
+        upperAngleR: 0.56,
+        lowerAngleR: 0.52,
+        browTiltR: -0.06,
+        pupilScale: 1.0,
+        spiral: 0.0,
+        giggle: 0.0,
+        mouthOpen: 0.22,
+        mouthSmile: -0.15,
+        mouthWidth: 0.62
+      };
+
+      function updateMoodAndFace(dt) {
+        state.idleSeconds += dt;
+        if (state.eyeWinceTimer > 0) state.eyeWinceTimer = Math.max(0, state.eyeWinceTimer - dt);
+        if (state.dizzyTimer > 0) state.dizzyTimer = Math.max(0, state.dizzyTimer - dt);
+        if (state.zapTimer > 0) state.zapTimer = Math.max(0, state.zapTimer - dt);
+        if (state.tickleTimer > 0) state.tickleTimer = Math.max(0, state.tickleTimer - dt);
+        if (state.thinkTimer > 0) state.thinkTimer = Math.max(0, state.thinkTimer - dt);
+        state.tickleScore = Math.max(0, state.tickleScore - dt * 1.6);
+
+        if (state.simTime - state.lastPokeTime > 5.2 && state.pokeCounter > 0) {
+          state.pokeCounter = Math.max(0, state.pokeCounter - dt * 0.8);
+        }
+
+        updateClusterPose(leftEyeCluster, leftRestAnchor, leftEye.root.position, leftEyeQuat);
+        updateClusterPose(rightEyeCluster, rightRestAnchor, rightEye.root.position, rightEyeQuat);
+        leftEye.root.quaternion.copy(leftEyeQuat);
+        rightEye.root.quaternion.copy(rightEyeQuat);
+
+        mouthGroup.position.lerpVectors(leftEye.root.position, rightEye.root.position, 0.5);
+        mouthGroup.quaternion.copy(leftEyeQuat).slerp(rightEyeQuat, 0.5);
+        const downDir = new THREE.Vector3(0, -0.072, 0.014).applyQuaternion(mouthGroup.quaternion);
+        mouthGroup.position.add(downDir);
+
+        brainUpVector.set(0, 1, 0).applyQuaternion(mouthGroup.quaternion);
+
+        let minY = Infinity, maxY = -Infinity;
+        let maxStretchR = 0;
+        const { pos, numParticles } = lattice;
+        for (let i = 0; i < numParticles; i++) {
+          const py = pos[i * 3 + 1];
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+          const dr = Math.hypot(
+            pos[i * 3] - brainCenterOfMass.x,
+            py - brainCenterOfMass.y,
+            pos[i * 3 + 2] - brainCenterOfMass.z
+          );
+          if (dr > maxStretchR) maxStretchR = dr;
+        }
+        const heightSpan = maxY - minY;
+        const isHighInAir = minY > 0.24;
+        const isSquashed = heightSpan < 0.48 && minY < 0.04;
+        const isStretched = maxStretchR > 0.78;
+        const isUpsideDown = brainUpVector.y < -0.15 && minY < 0.08;
+
+        if (isUpsideDown && !grabPatch.active) {
+          state.upsideDownTimer += dt;
+          state.nextHopTimer -= dt;
+          if (state.nextHopTimer <= 0) {
+            state.nextHopTimer = 0.72;
+            sound.playBoop(1.25);
+            for (let i = 0; i < numParticles; i++) {
+              const i3 = i * 3;
+              const ry = pos[i3 + 1] - brainCenterOfMass.y;
+              const rz = pos[i3 + 2] - brainCenterOfMass.z;
+              lattice.vel[i3 + 1] += 2.85 + rz * 6.8;
+              lattice.vel[i3 + 2] -= ry * 6.8;
+            }
+          }
+        } else {
+          state.upsideDownTimer = 0;
+        }
+
+        if (state.idleSeconds > 5.0 && state.idleSeconds < 19.0 && state.thinkTimer <= 0 && Math.random() < dt * 0.09) {
+          state.thinkTimer = 3.6;
+        }
+
+        let targetUpperL = 0.56, targetLowerL = 0.54, targetBrowL = -0.05;
+        let targetUpperR = 0.56, targetLowerR = 0.54, targetBrowR = -0.05;
+        let targetPupil = 1.0, targetSpiral = 0.0, targetGiggle = 0.0;
+        let targetMouthOpen = 0.22, targetMouthSmile = -0.14, targetMouthWidth = 0.62;
+        let basePulseRate = 2.8;
+
+        if (state.zapTimer > 0) {
+          state.mood = 'Zapped';
+          targetUpperL = 0.92; targetLowerL = 0.85; targetBrowL = -0.25;
+          targetUpperR = 0.92; targetLowerR = 0.85; targetBrowR = -0.25;
+          targetPupil = 0.52;
+          targetMouthOpen = 0.78; targetMouthSmile = -0.45; targetMouthWidth = 0.88;
+          basePulseRate = 44.0;
+        } else if (state.eyeWinceTimer > 0) {
+          state.mood = 'Wincing';
+          if (state.eyeWinceSide <= 0) {
+            targetUpperL = -0.15; targetLowerL = -0.15; targetBrowL = 0.28;
+          } else {
+            targetUpperL = 0.22; targetLowerL = 0.18; targetBrowL = 0.22;
+          }
+          if (state.eyeWinceSide >= 0) {
+            targetUpperR = -0.15; targetLowerR = -0.15; targetBrowR = 0.28;
+          } else {
+            targetUpperR = 0.22; targetLowerR = 0.18; targetBrowR = 0.22;
+          }
+          targetMouthOpen = 0.48; targetMouthSmile = -0.42; targetMouthWidth = 0.76;
+          basePulseRate = 12.5;
+        } else if (isHighInAir && !grabPatch.active) {
+          state.mood = 'Terrified';
+          targetUpperL = 0.95; targetLowerL = 0.90; targetBrowL = -0.34;
+          targetUpperR = 0.95; targetLowerR = 0.90; targetBrowR = -0.34;
+          targetPupil = 0.56;
+          targetMouthOpen = 0.85; targetMouthSmile = -0.48; targetMouthWidth = 0.72;
+          basePulseRate = 19.5;
+          sound.playWhee();
+        } else if (isUpsideDown) {
+          state.mood = 'Panicking';
+          targetUpperL = 0.88; targetLowerL = 0.82; targetBrowL = -0.32;
+          targetUpperR = 0.88; targetLowerR = 0.82; targetBrowR = -0.32;
+          targetPupil = 0.62;
+          targetMouthOpen = 0.72; targetMouthSmile = -0.42; targetMouthWidth = 0.82;
+          basePulseRate = 22.0;
+        } else if (state.dizzyTimer > 0) {
+          state.mood = 'Dizzy';
+          targetUpperL = 0.42; targetLowerL = 0.48; targetBrowL = -0.18;
+          targetUpperR = 0.58; targetLowerR = 0.36; targetBrowR = 0.16;
+          targetSpiral = 1.0;
+          targetMouthOpen = 0.42; targetMouthSmile = -0.25; targetMouthWidth = 0.58;
+          basePulseRate = 9.4;
+        } else if (isSquashed) {
+          state.mood = 'Squashed';
+          targetUpperL = -0.12; targetLowerL = -0.12; targetBrowL = 0.24;
+          targetUpperR = -0.12; targetLowerR = -0.12; targetBrowR = 0.24;
+          targetMouthOpen = 0.18; targetMouthSmile = -0.38; targetMouthWidth = 0.95;
+          basePulseRate = 8.2;
+        } else if (state.tickleTimer > 0) {
+          state.mood = 'Giggling';
+          targetUpperL = 0.44; targetLowerL = 0.18; targetBrowL = -0.16;
+          targetUpperR = 0.44; targetLowerR = 0.18; targetBrowR = -0.16;
+          targetGiggle = 1.0;
+          targetMouthOpen = 0.64; targetMouthSmile = 0.48; targetMouthWidth = 0.88;
+          basePulseRate = 16.4;
+        } else if (isStretched) {
+          state.mood = 'Stretched';
+          targetUpperL = 0.24; targetLowerL = 0.22; targetBrowL = 0.26;
+          targetUpperR = 0.24; targetLowerR = 0.22; targetBrowR = 0.26;
+          targetMouthOpen = 0.56; targetMouthSmile = -0.36; targetMouthWidth = 0.85;
+          basePulseRate = 11.2;
+        } else if (grabPatch.active) {
+          state.mood = 'Held';
+          targetUpperL = 0.78; targetLowerL = 0.68; targetBrowL = -0.22;
+          targetUpperR = 0.78; targetLowerR = 0.68; targetBrowR = -0.22;
+          targetPupil = 0.88;
+          targetMouthOpen = 0.46; targetMouthSmile = -0.18; targetMouthWidth = 0.58;
+          basePulseRate = 7.6;
+        } else if (state.pokeCounter >= 3.2) {
+          state.mood = 'Furious';
+          targetUpperL = 0.22; targetLowerL = 0.34; targetBrowL = 0.52;
+          targetUpperR = 0.22; targetLowerR = 0.34; targetBrowR = 0.52;
+          targetPupil = 0.74;
+          targetMouthOpen = 0.44; targetMouthSmile = -0.52; targetMouthWidth = 0.82;
+          basePulseRate = 18.0;
+        } else if (state.pokeCounter >= 1.4) {
+          state.mood = 'Annoyed';
+          targetUpperL = 0.30; targetLowerL = 0.38; targetBrowL = 0.36;
+          targetUpperR = 0.30; targetLowerR = 0.38; targetBrowR = 0.36;
+          targetPupil = 0.85;
+          targetMouthOpen = 0.24; targetMouthSmile = -0.38; targetMouthWidth = 0.68;
+          basePulseRate = 8.5;
+        } else if (state.idleSeconds >= 30.0) {
+          state.mood = 'Asleep';
+          targetUpperL = -0.14; targetLowerL = -0.10; targetBrowL = -0.10;
+          targetUpperR = -0.14; targetLowerR = -0.10; targetBrowR = -0.10;
+          targetMouthOpen = 0.32 + 0.14 * Math.sin(state.breathPhase);
+          targetMouthSmile = -0.08;
+          targetMouthWidth = 0.48;
+          basePulseRate = 1.2;
+          sound.playSnore();
+        } else if (state.idleSeconds >= 20.0) {
+          state.mood = 'Drowsy';
+          targetUpperL = 0.14; targetLowerL = 0.42; targetBrowL = -0.12;
+          targetUpperR = 0.14; targetLowerR = 0.42; targetBrowR = -0.12;
+          targetMouthOpen = 0.25; targetMouthSmile = -0.12; targetMouthWidth = 0.54;
+          basePulseRate = 1.8;
+        } else if (state.thinkTimer > 0) {
+          state.mood = 'Thinking';
+          targetUpperL = 0.62; targetLowerL = 0.38; targetBrowL = -0.22;
+          targetUpperR = 0.38; targetLowerR = 0.38; targetBrowR = 0.18;
+          targetMouthOpen = 0.18; targetMouthSmile = -0.06; targetMouthWidth = 0.46;
+          basePulseRate = 24.5;
+        } else if (pointerActive && state.idleSeconds < 4.0) {
+          state.mood = 'Curious';
+          targetUpperL = 0.72; targetLowerL = 0.64; targetBrowL = -0.16;
+          targetUpperR = 0.72; targetLowerR = 0.64; targetBrowR = -0.16;
+          targetPupil = 1.12;
+          targetMouthOpen = 0.30; targetMouthSmile = 0.05; targetMouthWidth = 0.56;
+          basePulseRate = 5.4;
+        } else {
+          state.mood = 'Calm';
+          targetUpperL = 0.42; targetLowerL = 0.46; targetBrowL = -0.06;
+          targetUpperR = 0.42; targetLowerR = 0.46; targetBrowR = -0.06;
+          targetMouthOpen = 0.26; targetMouthSmile = -0.22; targetMouthWidth = 0.62;
+          basePulseRate = 2.8;
+        }
+
+        if (targetUpperL > 0.05) {
+          nextBlinkTime -= dt;
+          if (nextBlinkTime <= 0) {
+            blinkTimer = 0.14;
+            nextBlinkTime = 2.4 + Math.random() * 3.6;
+          }
+        }
+        if (blinkTimer > 0) {
+          blinkTimer -= dt;
+          targetUpperL = -0.14; targetLowerL = -0.14;
+          targetUpperR = -0.14; targetLowerR = -0.14;
+        }
+
+        const kLerp = Math.min(1.0, dt * 12.0);
+        expr.upperAngleL += (targetUpperL - expr.upperAngleL) * kLerp;
+        expr.lowerAngleL += (targetLowerL - expr.lowerAngleL) * kLerp;
+        expr.browTiltL   += (targetBrowL - expr.browTiltL) * kLerp;
+        expr.upperAngleR += (targetUpperR - expr.upperAngleR) * kLerp;
+        expr.lowerAngleR += (targetLowerR - expr.lowerAngleR) * kLerp;
+        expr.browTiltR   += (targetBrowR - expr.browTiltR) * kLerp;
+        expr.pupilScale  += (targetPupil - expr.pupilScale) * kLerp;
+        expr.spiral      += (targetSpiral - expr.spiral) * kLerp;
+        expr.giggle      += (targetGiggle - expr.giggle) * kLerp;
+        expr.mouthOpen   += (targetMouthOpen - expr.mouthOpen) * kLerp;
+        expr.mouthSmile  += (targetMouthSmile - expr.mouthSmile) * kLerp;
+        expr.mouthWidth  += (targetMouthWidth - expr.mouthWidth) * kLerp;
+
+        function setLidNormals(lidUniforms, upperAng, lowerAng, browTilt, noseSign) {
+          const uY = Math.cos(upperAng);
+          const uZ = -Math.sin(upperAng);
+          const uX = noseSign * Math.sin(browTilt) * 0.65;
+          lidUniforms.uUpperNormal.value.set(uX, uY, uZ).normalize();
+
+          const lY = -Math.cos(lowerAng);
+          const lZ = -Math.sin(lowerAng);
+          const lX = -noseSign * Math.sin(browTilt) * 0.25;
+          lidUniforms.uLowerNormal.value.set(lX, lY, lZ).normalize();
+        }
+
+        setLidNormals(leftEye.lidUniforms, expr.upperAngleL, expr.lowerAngleL, expr.browTiltL, 1.0);
+        setLidNormals(rightEye.lidUniforms, expr.upperAngleR, expr.lowerAngleR, expr.browTiltR, -1.0);
+
+        mouthUniforms.uMouthOpen.value = expr.mouthOpen;
+        mouthUniforms.uMouthSmile.value = expr.mouthSmile;
+        mouthUniforms.uMouthWidth.value = expr.mouthWidth;
+
+        nextSaccadeTime -= dt;
+        if (nextSaccadeTime <= 0) {
+          nextSaccadeTime = 0.9 + Math.random() * 2.2;
+          saccadeOffset.set((Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.06);
+        }
+
+        const invLeft = leftEye.root.quaternion.clone().invert();
+        const invRight = rightEye.root.quaternion.clone().invert();
+
+        const dirL = gazeWorldTarget.clone().sub(leftEye.root.position).normalize().applyQuaternion(invLeft);
+        const dirR = gazeWorldTarget.clone().sub(rightEye.root.position).normalize().applyQuaternion(invRight);
+
+        let gxL = THREE.MathUtils.clamp(dirL.x * 0.46 + saccadeOffset.x, -0.34, 0.34);
+        let gyL = THREE.MathUtils.clamp(dirL.y * 0.42 + saccadeOffset.y, -0.28, 0.28);
+        let gxR = THREE.MathUtils.clamp(dirR.x * 0.46 + saccadeOffset.x, -0.34, 0.34);
+        let gyR = THREE.MathUtils.clamp(dirR.y * 0.42 + saccadeOffset.y, -0.28, 0.28);
+
+        if (state.mood === 'Thinking') {
+          gxL = 0.14; gyL = 0.24;
+          gxR = 0.14; gyR = 0.24;
+        }
+
+        leftEye.eyeUniforms.uGazeOffset.value.lerp(new THREE.Vector2(gxL, gyL), 0.22);
+        rightEye.eyeUniforms.uGazeOffset.value.lerp(new THREE.Vector2(gxR, gyR), 0.22);
+        leftEye.eyeUniforms.uPupilScale.value = expr.pupilScale;
+        rightEye.eyeUniforms.uPupilScale.value = expr.pupilScale;
+        leftEye.eyeUniforms.uSpiralAmount.value = expr.spiral;
+        rightEye.eyeUniforms.uSpiralAmount.value = expr.spiral;
+        leftEye.eyeUniforms.uGiggleCrescent.value = expr.giggle;
+        rightEye.eyeUniforms.uGiggleCrescent.value = expr.giggle;
+        leftEye.eyeUniforms.uTime.value = state.simTime;
+        rightEye.eyeUniforms.uTime.value = state.simTime;
+
+        starsGroup.visible = true;
+        const starBaseY = brainCenterOfMass.y + 0.46;
+        const orbitSpeed = state.dizzyTimer > 0 ? 4.2 : 1.35;
+        const orbitRx = state.dizzyTimer > 0 ? 0.22 : 0.16;
+        const orbitRz = state.dizzyTimer > 0 ? 0.14 : 0.09;
+        for (let i = 0; i < starMeshes.length; i++) {
+          const a = state.simTime * orbitSpeed + (i / starMeshes.length) * Math.PI * 2;
+          const sm = starMeshes[i];
+          sm.position.set(
+            brainCenterOfMass.x + Math.cos(a) * orbitRx,
+            starBaseY + Math.sin(a * 2.0 + i) * 0.025,
+            brainCenterOfMass.z + Math.sin(a) * orbitRz
+          );
+          sm.rotation.y = -a;
+          sm.rotation.z = Math.sin(state.simTime * 3.0 + i) * 0.22;
+          const sScale = state.dizzyTimer > 0 ? 1.15 : (state.mood === 'Asleep' ? 0.0 : 0.72);
+          sm.scale.setScalar(sScale);
+        }
+
+        const showZs = (state.mood === 'Asleep' || state.mood === 'Drowsy');
+        for (let i = 0; i < sleepZs.length; i++) {
+          const zObj = sleepZs[i];
+          zObj.sprite.visible = showZs;
+          if (showZs) {
+            zObj.phase = (zObj.phase + dt * 0.36) % 1.0;
+            const p = zObj.phase;
+            zObj.sprite.position.set(
+              brainCenterOfMass.x + 0.12 + Math.sin(p * Math.PI * 3.0 + i) * 0.06,
+              brainCenterOfMass.y + 0.36 + p * 0.42,
+              brainCenterOfMass.z + 0.05
+            );
+            const sc = 0.06 + p * 0.09;
+            zObj.sprite.scale.set(sc, sc, 1);
+            zObj.mat.opacity = Math.sin(p * Math.PI) * (state.mood === 'Asleep' ? 0.88 : 0.42);
+          }
+        }
+
+        state.firingRate += (basePulseRate - state.firingRate) * Math.min(1.0, dt * 4.5);
+
+        const expectedSpawns = state.firingRate * dt;
+        let spawns = Math.floor(expectedSpawns);
+        if (Math.random() < (expectedSpawns - spawns)) spawns++;
+
+        for (let s = 0; s < spawns; s++) {
+          for (let i = 0; i < MAX_PULSES; i++) {
+            if (!pulses[i].active) {
+              pulses[i].active = true;
+              pulses[i].threadIdx = Math.floor(Math.random() * NUM_THREADS);
+              pulses[i].t = 0.0;
+              pulses[i].speed = 1.6 + Math.random() * 1.4 + (state.zapTimer > 0 ? 2.2 : 0.0);
+              pulses[i].intensity = state.zapTimer > 0 ? 1.45 : (0.75 + Math.random() * 0.55);
+              break;
+            }
+          }
+        }
+
+        let activeSparkSlot = 0;
+        let totalSparkEnergy = 0;
+        for (let i = 0; i < 8; i++) shaderSparkPositions[i].set(0, 0.3, 0, 0);
+
+        for (let i = 0; i < MAX_PULSES; i++) {
+          const p = pulses[i];
+          if (!p.active) {
+            sparkIntArray[i] = 0.0;
+            continue;
+          }
+          p.t += dt * p.speed;
+          if (p.t >= 1.0) {
+            p.active = false;
+            sparkIntArray[i] = 0.0;
+            continue;
+          }
+
+          const segFloat = p.t * (PTS_PER_THREAD - 1);
+          const segIdx = Math.min(PTS_PER_THREAD - 2, Math.floor(segFloat));
+          const frac = segFloat - segIdx;
+          const idxA = (p.threadIdx * PTS_PER_THREAD + segIdx) * 3;
+          const idxB = idxA + 3;
+
+          const sx = threadDeformedPos[idxA] + (threadDeformedPos[idxB] - threadDeformedPos[idxA]) * frac;
+          const sy = threadDeformedPos[idxA + 1] + (threadDeformedPos[idxB + 1] - threadDeformedPos[idxA + 1]) * frac;
+          const sz = threadDeformedPos[idxA + 2] + (threadDeformedPos[idxB + 2] - threadDeformedPos[idxA + 2]) * frac;
+
+          const env = Math.sin(p.t * Math.PI) * p.intensity;
+          sparkPosArray[i * 3] = sx;
+          sparkPosArray[i * 3 + 1] = sy;
+          sparkPosArray[i * 3 + 2] = sz;
+          sparkIntArray[i] = env;
+          totalSparkEnergy += env;
+
+          if (activeSparkSlot < 8 && env > 0.25) {
+            shaderSparkPositions[activeSparkSlot].set(sx, sy, sz, env);
+            activeSparkSlot++;
+          }
+        }
+
+        sparkPosAttr.needsUpdate = true;
+        sparkIntAttr.needsUpdate = true;
+
+        tableUniforms.uBrainCenter.value.copy(brainCenterOfMass);
+        tableUniforms.uSparkIntensity.value = Math.min(1.8, 0.14 + totalSparkEnergy * 0.09);
+      }
+
+      // =========================================================================
+      // 10. POINTER / TOUCH INTERACTION
+      // =========================================================================
+      const raycaster = new THREE.Raycaster();
+      const pointerDownPos = new THREE.Vector2();
+      let isOrbitDragging = false;
+      let pointerDownTime = 0;
+      let hitEyeSideOnDown = 0;
+      let initialPinchAngle = null;
+
+      function updatePointerNDC(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+        pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      }
+
+      function updateCursorGazeTarget() {
+        raycaster.setFromCamera(pointerNDC, camera);
+        const hits = raycaster.intersectObject(gelatinBrainMesh, false);
+        if (hits.length > 0) {
+          const hitPt = hits[0].point;
+          gazeWorldTarget.lerp(hitPt.clone().add(raycaster.ray.direction.clone().multiplyScalar(-0.08)), 0.35);
+          const deltaMove = pointerNDC.distanceTo(grabPatch.lastPointerPos);
+          if (!grabPatch.active && !isOrbitDragging && deltaMove > 0.008) {
+            state.tickleScore += deltaMove * 16.0;
+            if (state.tickleScore > 1.85) {
+              state.tickleTimer = 1.65;
+              sound.playGiggle();
+            }
+          }
+        } else {
+          const targetDist = Math.max(1.2, orbit.distance - 0.55);
+          const pt = new THREE.Vector3();
+          raycaster.ray.at(targetDist, pt);
+          pt.y = Math.max(0.08, pt.y);
+          gazeWorldTarget.lerp(pt, 0.25);
+        }
+        grabPatch.lastPointerPos.copy(pointerNDC);
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        updatePointerNDC(e.clientX, e.clientY);
+        pointerActive = true;
+        state.idleSeconds = 0;
+        pointerDownPos.set(e.clientX, e.clientY);
+        pointerDownTime = performance.now();
+        hitEyeSideOnDown = 0;
+
+        raycaster.setFromCamera(pointerNDC, camera);
+
+        const eyeHitsL = raycaster.intersectObject(leftEye.root, true);
+        const eyeHitsR = raycaster.intersectObject(rightEye.root, true);
+        if (eyeHitsL.length > 0 || eyeHitsR.length > 0) {
+          hitEyeSideOnDown = eyeHitsL.length > 0 ? -1 : 1;
+        }
+
+        const brainHits = raycaster.intersectObject(gelatinBrainMesh, false);
+        if (brainHits.length > 0) {
+          const hitPt = brainHits[0].point;
+          grabPatch.active = true;
+          grabPatch.anchorWorld.copy(hitPt);
+          grabPatch.targetWorld.copy(hitPt);
+          grabPatch.twistAngle = 0;
+          grabPatch.targetTwistAngle = 0;
+          grabPatch.dragPlaneDist = camera.position.distanceTo(hitPt);
+          grabPatch.velocityHistory = [{ pos: hitPt.clone(), time: performance.now() }];
+          grabPatch.indices = [];
+          grabPatch.weights = [];
+          grabPatch.localOffsets = [];
+
+          const patchRadius = 0.28;
+          const { pos, numParticles } = lattice;
+          for (let i = 0; i < numParticles; i++) {
+            const px = pos[i * 3], py = pos[i * 3 + 1], pz = pos[i * 3 + 2];
+            const d = Math.hypot(px - hitPt.x, py - hitPt.y, pz - hitPt.z);
+            if (d < patchRadius) {
+              grabPatch.indices.push(i);
+              grabPatch.weights.push(Math.exp(-(d * d) / 0.028));
+              grabPatch.localOffsets.push(new THREE.Vector3(px - hitPt.x, py - hitPt.y, pz - hitPt.z));
+            }
+          }
+          container.classList.add('grabbing');
+          sound.playSquelch(0.45);
+        } else {
+          isOrbitDragging = true;
+          container.classList.add('grabbing');
+        }
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        updatePointerNDC(e.clientX, e.clientY);
+        pointerActive = true;
+        state.idleSeconds = 0;
+        updateCursorGazeTarget();
+
+        if (grabPatch.active) {
+          raycaster.setFromCamera(pointerNDC, camera);
+          const newTarget = new THREE.Vector3();
+          raycaster.ray.at(grabPatch.dragPlaneDist, newTarget);
+          newTarget.y = Math.max(0.03, newTarget.y);
+          grabPatch.targetWorld.copy(newTarget);
+
+          const now = performance.now();
+          grabPatch.velocityHistory.push({ pos: newTarget.clone(), time: now });
+          while (grabPatch.velocityHistory.length > 6) {
+            grabPatch.velocityHistory.shift();
+          }
+        } else if (isOrbitDragging) {
+          const dx = e.clientX - pointerDownPos.x;
+          const dy = e.clientY - pointerDownPos.y;
+          pointerDownPos.set(e.clientX, e.clientY);
+          orbit.targetYaw -= dx * 0.0065;
+          orbit.targetPitch = THREE.MathUtils.clamp(orbit.targetPitch + dy * 0.0055, 0.10, 1.18);
+        }
+      });
+
+      window.addEventListener('pointerup', (e) => {
+        container.classList.remove('grabbing');
+        const clickDuration = performance.now() - pointerDownTime;
+        const movePx = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+
+        if (grabPatch.active) {
+          if (clickDuration < 220 && movePx < 10) {
+            if (hitEyeSideOnDown !== 0) {
+              state.eyeWinceSide = hitEyeSideOnDown;
+              state.eyeWinceTimer = 1.65;
+              sound.playOuch();
+              triggerPokeImpulse(grabPatch.anchorWorld, raycaster.ray.direction);
+            } else {
+              triggerPokeImpulse(grabPatch.anchorWorld, raycaster.ray.direction);
+            }
+          } else if (grabPatch.velocityHistory.length >= 2) {
+            const first = grabPatch.velocityHistory[0];
+            const last = grabPatch.velocityHistory[grabPatch.velocityHistory.length - 1];
+            const dtSec = Math.max(0.016, (last.time - first.time) / 1000.0);
+            const flickVel = last.pos.clone().sub(first.pos).divideScalar(dtSec);
+            const speed = flickVel.length();
+            if (speed > 0.45) {
+              const clampedVel = flickVel.multiplyScalar(Math.min(5.2, speed) / speed);
+              const { vel, numParticles } = lattice;
+              for (let i = 0; i < numParticles; i++) {
+                vel[i * 3] += clampedVel.x * 0.55;
+                vel[i * 3 + 1] += clampedVel.y * 0.55 + 0.35;
+                vel[i * 3 + 2] += clampedVel.z * 0.55;
+              }
+              sound.playWhee();
+            }
+          }
+          grabPatch.active = false;
+        }
+        isOrbitDragging = false;
+      });
+
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        state.idleSeconds = 0;
+        if (grabPatch.active) {
+          grabPatch.targetTwistAngle += e.deltaY * 0.0038;
+          sound.playSquelch(0.32);
+        } else {
+          orbit.targetDistance = THREE.MathUtils.clamp(orbit.targetDistance + e.deltaY * 0.0014, 1.55, 4.20);
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          const dx = e.touches[1].clientX - e.touches[0].clientX;
+          const dy = e.touches[1].clientY - e.touches[0].clientY;
+          initialPinchAngle = Math.atan2(dy, dx);
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && initialPinchAngle !== null && grabPatch.active) {
+          const dx = e.touches[1].clientX - e.touches[0].clientX;
+          const dy = e.touches[1].clientY - e.touches[0].clientY;
+          const angle = Math.atan2(dy, dx);
+          grabPatch.targetTwistAngle += (angle - initialPinchAngle) * 1.35;
+          initialPinchAngle = angle;
+        }
+      }, { passive: true });
+
+      canvas.addEventListener('touchend', () => {
+        initialPinchAngle = null;
+      }, { passive: true });
+
+      // =========================================================================
+      // 11. ACTIONS (Poke, Toss, Zap, Reset) & UI CONTROLS
+      // =========================================================================
+      function triggerPokeImpulse(worldPoint, dirVec) {
+        state.idleSeconds = 0;
+        state.pokeCounter = Math.min(6.0, state.pokeCounter + 1.0);
+        state.lastPokeTime = state.simTime;
+
+        const targetPt = worldPoint || new THREE.Vector3(
+          brainCenterOfMass.x + (Math.random() - 0.5) * 0.35,
+          brainCenterOfMass.y + 0.15,
+          brainCenterOfMass.z + 0.25
+        );
+        const pushDir = dirVec ? dirVec.clone().normalize() : new THREE.Vector3(
+          (Math.random() - 0.5) * 0.6,
+          -0.65,
+          -0.75
+        ).normalize();
+
+        const { pos, vel, numParticles } = lattice;
+        for (let i = 0; i < numParticles; i++) {
+          const i3 = i * 3;
+          const d = Math.hypot(pos[i3] - targetPt.x, pos[i3 + 1] - targetPt.y, pos[i3 + 2] - targetPt.z);
+          const falloff = Math.exp(-(d * d) / 0.065);
+          vel[i3] += pushDir.x * 3.6 * falloff;
+          vel[i3 + 1] += pushDir.y * 3.6 * falloff;
+          vel[i3 + 2] += pushDir.z * 3.6 * falloff;
+        }
+
+        if (state.pokeCounter >= 2.5) {
+          sound.playOuch();
+        } else {
+          sound.playBoop(0.95 + Math.random() * 0.2);
+          sound.playSquelch(0.6);
+        }
+      }
+
+      function triggerToss() {
+        state.idleSeconds = 0;
+        const { pos, vel, numParticles } = lattice;
+        const spinSide = (Math.random() < 0.5 ? -1 : 1) * (2.5 + Math.random() * 2.5);
+        for (let i = 0; i < numParticles; i++) {
+          const i3 = i * 3;
+          const rx = pos[i3] - brainCenterOfMass.x;
+          const ry = pos[i3 + 1] - brainCenterOfMass.y;
+          vel[i3] += -ry * spinSide + (Math.random() - 0.5) * 0.4;
+          vel[i3 + 1] += 4.25 + rx * spinSide;
+          vel[i3 + 2] += (Math.random() - 0.5) * 0.6;
+        }
+        sound.playWhee();
+      }
+
+      function triggerZap() {
+        state.idleSeconds = 0;
+        state.zapTimer = 1.45;
+        state.dizzyTimer = 4.2;
+        const { vel, numParticles } = lattice;
+        for (let i = 0; i < numParticles; i++) {
+          const i3 = i * 3;
+          vel[i3] += (Math.random() - 0.5) * 2.8;
+          vel[i3 + 1] += 1.6 + Math.random() * 1.4;
+          vel[i3 + 2] += (Math.random() - 0.5) * 2.8;
+        }
+        sound.playZap();
+      }
+
+      function triggerReset() {
+        state.idleSeconds = 0;
+        state.pokeCounter = 0;
+        state.eyeWinceTimer = 0;
+        state.dizzyTimer = 0;
+        state.zapTimer = 0;
+        state.tickleTimer = 0;
+        state.thinkTimer = 0;
+        state.mood = 'Calm';
+        maxVerticalVelocity = 0;
+
+        const { pos, prevPos, restPos, vel, tetQuats, numTets } = lattice;
+        pos.set(restPos);
+        prevPos.set(restPos);
+        vel.fill(0);
+        for (let t = 0; t < numTets; t++) {
+          tetQuats[t * 4] = 0;
+          tetQuats[t * 4 + 1] = 0;
+          tetQuats[t * 4 + 2] = 0;
+          tetQuats[t * 4 + 3] = 1;
+        }
+        sound.playBoop(1.1);
+      }
+
+      function applyFlavour(key) {
+        const f = FLAVOURS[key];
+        if (!f) return;
+        state.flavourKey = key;
+
+        document.documentElement.style.setProperty('--accent-rose', f.accentHex);
+        document.getElementById('readout-mass').innerHTML = `≈${f.massGrams}<small>g</small>`;
+
+        document.querySelectorAll('.flavour-btn').forEach((btn) => {
+          btn.classList.toggle('active', btn.getAttribute('data-flavour') === key);
+        });
+
+        gelatinUniforms.uAbsorbColor.value.copy(f.absorbColor);
+        gelatinUniforms.uScatterColor.value.copy(f.scatterColor);
+        gelatinUniforms.uRimColor.value.copy(f.rimColor);
+        gelatinUniforms.uSparkColor.value.set(f.sparkColor.r, f.sparkColor.g, f.sparkColor.b);
+        gelatinUniforms.uOpacityMul.value = f.opacityMul;
+
+        leftEye.eyeUniforms.uIrisColor.value.copy(f.irisColor);
+        rightEye.eyeUniforms.uIrisColor.value.copy(f.irisColor);
+        leftEye.lidUniforms.uLidColor.value.copy(f.tintColor);
+        rightEye.lidUniforms.uLidColor.value.copy(f.tintColor);
+
+        sparkMat.uniforms.uSparkColor.value.copy(f.sparkColor);
+        tableUniforms.uShadowTint.value.copy(f.shadowTint);
+        tableUniforms.uSparkColor.value.set(f.sparkColor.r, f.sparkColor.g, f.sparkColor.b);
+
+        sound.playBoop(1.05);
+      }
+
+      document.querySelectorAll('.flavour-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          applyFlavour(btn.getAttribute('data-flavour'));
+        });
+      });
+
+      const sliderFirmness = document.getElementById('slider-firmness');
+      const valFirmness = document.getElementById('val-firmness');
+      sliderFirmness.addEventListener('input', () => {
+        state.firmness = parseFloat(sliderFirmness.value);
+        valFirmness.textContent = state.firmness.toFixed(2);
+      });
+
+      const sliderDamping = document.getElementById('slider-damping');
+      const valDamping = document.getElementById('val-damping');
+      sliderDamping.addEventListener('input', () => {
+        state.damping = parseFloat(sliderDamping.value);
+        valDamping.textContent = state.damping.toFixed(2);
+      });
+
+      document.getElementById('btn-poke').addEventListener('click', () => triggerPokeImpulse(null, null));
+      document.getElementById('btn-toss').addEventListener('click', triggerToss);
+      document.getElementById('btn-zap').addEventListener('click', triggerZap);
+      document.getElementById('btn-reset').addEventListener('click', triggerReset);
+
+      const btnSound = document.getElementById('btn-sound');
+      const soundLabel = document.getElementById('sound-label');
+      btnSound.addEventListener('click', () => {
+        state.soundEnabled = !state.soundEnabled;
+        soundLabel.textContent = state.soundEnabled ? 'ON' : 'OFF';
+        soundLabel.classList.toggle('on', state.soundEnabled);
+        if (state.soundEnabled) {
+          sound.ensureContext();
+          sound.playBoop(1.15);
+        }
+      });
+
+      const chkSlow = document.getElementById('chk-slow');
+      chkSlow.addEventListener('change', () => {
+        state.slowMo = chkSlow.checked;
+      });
+
+      const chkMesh = document.getElementById('chk-mesh');
+      chkMesh.addEventListener('change', () => {
+        state.showMesh = chkMesh.checked;
+        wireframeBrainMesh.visible = state.showMesh;
+      });
+
+      const btnPause = document.getElementById('btn-pause');
+      const statusDot = document.getElementById('status-dot');
+      const statusText = document.getElementById('status-text');
+      function togglePause() {
+        state.paused = !state.paused;
+        btnPause.textContent = state.paused ? 'Resume' : 'Pause';
+        btnPause.classList.toggle('active', state.paused);
+        statusDot.classList.toggle('paused', state.paused);
+        statusText.textContent = (isWebGL2 ? 'WEBGL2' : 'WEBGL') + (state.paused ? ' · PAUSED' : ' · ALIVE');
+      }
+      btnPause.addEventListener('click', togglePause);
+
+      const btnNotes = document.getElementById('btn-notes');
+      const notesDrawer = document.getElementById('notes-drawer');
+      const notesPlus = document.getElementById('notes-plus');
+      btnNotes.addEventListener('click', () => {
+        const isOpen = notesDrawer.classList.toggle('open');
+        notesPlus.textContent = isOpen ? '−' : '+';
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+        const key = e.key.toLowerCase();
+        if (key === 'p') {
+          triggerPokeImpulse(null, null);
+        } else if (key === 't') {
+          triggerToss();
+        } else if (key === 'z') {
+          triggerZap();
+        } else if (key === 'r') {
+          triggerReset();
+        } else if (e.code === 'Space') {
+          e.preventDefault();
+          togglePause();
+        }
+      });
+
+      function handleResize() {
+        const w = Math.max(1, container.clientWidth);
+        const h = Math.max(1, container.clientHeight);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+
+        const rw = Math.max(1, Math.floor(w * renderer.getPixelRatio()));
+        const rh = Math.max(1, Math.floor(h * renderer.getPixelRatio()));
+        sceneRT.setSize(rw, rh);
+        backDepthRT.setSize(rw, rh);
+        compositeRT.setSize(rw, rh);
+        gelatinUniforms.uResolution.value.set(rw, rh);
+      }
+      window.addEventListener('resize', handleResize);
+
+      // =========================================================================
+      // 12. MAIN RENDER LOOP (Executing the 6 THREE.Scene Passes)
+      // =========================================================================
+      const elVolume = document.getElementById('readout-volume');
+      const elFiring = document.getElementById('readout-firing');
+      const elMood = document.getElementById('readout-mood');
+      let uiFrameCounter = 0;
+
+      setTimeout(() => {
+        const banner = document.getElementById('loading-banner');
+        if (banner) banner.classList.add('hidden');
+      }, 120);
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        const dt = state.slowMo ? (1.0 / 60.0) * 0.25 : (1.0 / 60.0);
+        if (!state.paused) {
+          state.simTime += dt;
+          stepPhysics();
+          updateMoodAndFace(dt);
+        }
+
+        updateCameraTransform();
+
+        const flicker = 0.94 + 0.06 * Math.sin(state.simTime * 17.0) * Math.cos(state.simTime * 29.0);
+        tableUniforms.uCandleFlicker.value = flicker;
+        tableUniforms.uTime.value = state.simTime;
+        waxMat.uniforms.uFlicker.value = flicker;
+        flameMat.uniforms.uTime.value = state.simTime;
+        gelatinUniforms.uCandleFlicker.value = flicker;
+        gelatinUniforms.uZapAmount.value = state.zapTimer > 0 ? Math.min(1.0, state.zapTimer) : 0.0;
+        gelatinUniforms.uTime.value = state.simTime;
+
+        // PASS 1: Key-light shadow map (PCSS-lite)
+        renderer.setRenderTarget(shadowRT);
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.clear(true, true, false);
+        renderer.render(shadowScene, shadowCamera);
+
+        // PASS 2: Top-down contact AO
+        renderer.setRenderTarget(aoRT);
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.clear(true, true, false);
+        renderer.render(aoScene, aoCamera);
+
+        // PASS 3: Scene pass (table, candle, eyes, lids, bubbles, sparks)
+        renderer.setRenderTarget(sceneRT);
+        renderer.setClearColor(0x0b0611, 1.0);
+        renderer.clear(true, true, false);
+        renderer.render(mainScene, camera);
+
+        // PASS 4: Back-face depth pass for view-ray thickness
+        renderer.setRenderTarget(backDepthRT);
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.clear(true, true, false);
+        renderer.render(backfaceScene, camera);
+
+        // PASS 5: Gelatin pass (Refraction + Beer-Lambert + Wisps + Softboxes)
+        renderer.setRenderTarget(compositeRT);
+        renderer.setClearColor(0x0b0611, 1.0);
+        renderer.clear(true, true, false);
+        renderer.render(mainScene, camera);
+        renderer.render(gelatinScene, camera);
+
+        // PASS 6: Khronos PBR Neutral Tone Mapping to Screen
+        renderer.setRenderTarget(null);
+        renderer.clear(true, true, false);
+        renderer.render(postScene, postCamera);
+
+        uiFrameCounter++;
+        if (uiFrameCounter % 4 === 0) {
+          elVolume.innerHTML = `${state.volumePct.toFixed(1)}<small>%</small>`;
+          elFiring.innerHTML = `${state.firingRate.toFixed(1)}<small>/s</small>`;
+          elMood.textContent = state.mood;
+        }
+      }
+
+      animate();
+    })();
+  </script>
+</body>
+</html>
